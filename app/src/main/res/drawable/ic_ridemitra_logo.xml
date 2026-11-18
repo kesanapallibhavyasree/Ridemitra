@@ -1,0 +1,47 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="96"
+    android:viewportHeight="96">
+    <!-- Background Circle with Gradient -->
+    <path
+        android:pathData="M48,6C24.8,6 6,24.8 6,48s18.8,42 42,42s42,-18.8 42,-42S71.2,6 48,6z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:startX="12"
+                android:startY="12"
+                android:endX="84"
+                android:endY="84"
+                android:type="linear">
+                <item android:offset="0.0" android:color="#142B45" />
+                <item android:offset="0.55" android:color="#1E4575" />
+                <item android:offset="1.0" android:color="#276EF1" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- Outer Transit Glow Orbit Ring -->
+    <path
+        android:pathData="M22,54 A28,28 0 1,0 68,26"
+        android:strokeWidth="3.2"
+        android:strokeLineCap="round"
+        android:strokeColor="#20BFA9" />
+    <!-- Dashed Route Trail -->
+    <path
+        android:pathData="M24,56 C28,68 40,74 54,72 C68,70 76,58 74,44"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:strokeColor="#56CCF2" />
+    <!-- Modern Sleek Airplane -->
+    <path
+        android:pathData="M52.5,24 L48,34 L33,38 L33,42 L47,44 L46,55 L40,58 L40,62 L48,60 L56,62 L56,58 L50,55 L49,44 L63,42 L63,38 L48,34 Z"
+        android:fillColor="#FFFFFF" />
+    <!-- Carpool Pulse Pin (Teal) -->
+    <path
+        android:pathData="M68,26m-4.5,0a4.5,4.5 0 1,1 9,0a4.5,4.5 0 1,1 -9,0"
+        android:fillColor="#20BFA9" />
+    <!-- Destination Pin (Gold) -->
+    <path
+        android:pathData="M22,54m-3.5,0a3.5,3.5 0 1,1 7,0a3.5,3.5 0 1,1 -7,0"
+        android:fillColor="#FFB020" />
+</vector>
