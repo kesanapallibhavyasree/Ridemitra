@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,13 +44,11 @@ fun RideMitraHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (onBackClick != null) {
-            Box(
+            IconButton(
+                onClick = onBackClick,
                 modifier = Modifier
                     .size(40.dp)
-                    .clip(CircleShape)
-                    .background(SurfaceVariantLight)
-                    .clickable { onBackClick() },
-                contentAlignment = Alignment.Center
+                    .background(SurfaceVariantLight, CircleShape)
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,

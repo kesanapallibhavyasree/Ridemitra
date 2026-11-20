@@ -142,7 +142,7 @@ fun PassengerMainScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(BackgroundLight)
-                .padding(if (isTopLevelScreen) innerPadding else androidx.compose.foundation.layout.PaddingValues())
+                .padding(innerPadding)
         ) {
             if (currentSubScreen != PassengerSubScreen.HOME) {
                 // Sub-screen navigation within Passenger experience
