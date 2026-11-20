@@ -12,29 +12,29 @@ import kotlin.math.roundToInt
 object AirportPricingEngine {
 
     // Standard Airport Mobility Rate Card
-    private const val BASE_AIRPORT_FLAG_DOWN = 100.0   // Fixed base fare for airport terminal departure
-    private const val RATE_PER_KM = 16.5              // Standard per kilometer rate
-    private const val RATE_PER_MINUTE = 2.0           // Travel time & congestion rate
-    private const val AIRPORT_TOLL_AND_PARKING = 120.0// Mandatory IGI Airport commercial access fee
+    const val BASE_AIRPORT_FLAG_DOWN = 100.0   // Fixed base fare for airport terminal departure
+    const val RATE_PER_KM = 16.5              // Standard per kilometer rate
+    const val RATE_PER_MINUTE = 2.0           // Travel time & congestion rate
+    const val DEFAULT_AIRPORT_TOLL = 120.0    // Standard airport access fee
 
     // Platform Policy Constants
-    private const val SOLO_PROMOTIONAL_DISCOUNT_PERCENT = 0.10 // 10% Platform-funded solo discount
-    private const val ADVANCE_PAYMENT_RATIO = 0.10             // 10% Advance deposit required
-    private const val CANCELLATION_REFUND_RATIO = 0.05          // 5% of total ride fare refund if > 1 hr
+    const val SOLO_PROMOTIONAL_DISCOUNT_PERCENT = 0.10 // 10% Platform-funded solo discount
+    const val ADVANCE_PAYMENT_RATIO = 0.10             // 10% Advance deposit required
+    const val CANCELLATION_REFUND_RATIO = 0.05          // 5% of total ride fare refund if > 1 hr
 
     /**
-     * Calculates dynamic fare based on route distance and duration.
-     * Returns null if distance is invalid or route not yet selected.
+     * Calculates dynamic fare based on route distance, duration, and airport-specific toll.
      */
     fun calculateFare(
         distanceKm: Double,
         durationMinutes: Int,
         rideType: RideOptionType,
-        passengerCount: Int = 1
+        passengerCount: Int = 1,
+        airportTollFee: Double = DEFAULT_AIRPORT_TOLL
     ): FareEstimate {
         val distanceCharge = distanceKm * RATE_PER_KM
         val timeCharge = durationMinutes * RATE_PER_MINUTE
-        val fullTripVehicleFare = BASE_AIRPORT_FLAG_DOWN + distanceCharge + timeCharge + AIRPORT_TOLL_AND_PARKING
+        val fullTripVehicleFare = BASE_AIRPORT_FLAG_DOWN + distanceCharge + timeCharge + airportTollFee
 
         return when (rideType) {
             RideOptionType.SHARED_POOL -> {
@@ -61,7 +61,7 @@ object AirportPricingEngine {
                     baseFare = BASE_AIRPORT_FLAG_DOWN,
                     distanceCharge = distanceCharge,
                     timeCharge = timeCharge,
-                    airportTollFee = AIRPORT_TOLL_AND_PARKING,
+                    airportTollFee = airportTollFee,
                     isConfirmed = false
                 )
             }
@@ -90,7 +90,7 @@ object AirportPricingEngine {
                     baseFare = BASE_AIRPORT_FLAG_DOWN,
                     distanceCharge = distanceCharge,
                     timeCharge = timeCharge,
-                    airportTollFee = AIRPORT_TOLL_AND_PARKING,
+                    airportTollFee = airportTollFee,
                     isConfirmed = false
                 )
             }
