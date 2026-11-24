@@ -2,6 +2,7 @@ package com.ridemitra.app.ui.screens.driver.registration
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Badge
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ridemitra.app.domain.model.DriverLicenseInfo
+import com.ridemitra.app.domain.validation.DocumentValidator
 import com.ridemitra.app.ui.components.DocumentUploadBox
 import com.ridemitra.app.ui.components.RideMitraButton
 import com.ridemitra.app.ui.components.RideMitraCard
@@ -37,6 +40,7 @@ import com.ridemitra.app.ui.components.RideMitraHeader
 import com.ridemitra.app.ui.components.RideMitraTextField
 import com.ridemitra.app.ui.theme.BackgroundLight
 import com.ridemitra.app.ui.theme.BorderLight
+import com.ridemitra.app.ui.theme.ErrorRed
 import com.ridemitra.app.ui.theme.PrimaryGradient
 import com.ridemitra.app.ui.theme.PrimaryNavy
 import com.ridemitra.app.ui.theme.RoyalBlue
@@ -46,14 +50,12 @@ import com.ridemitra.app.ui.theme.WarningAmber
 
 /**
  * Step 3: Driving Licence Verification
- * Collects:
+ * Features:
  * - Driving licence number
- * - Licence front image
- * - Licence back image
- * - Issue date
- * - Expiry date
  * - Licence category
- * - Form & Expiry validation
+ * - Issue Date & Strict Expiration Date Validation
+ * - Expiration check prevents proceeding if licence is expired
+ * - Document scan uploads (front & back)
  */
 @Composable
 fun DriverLicenseScreen(
@@ -71,6 +73,12 @@ fun DriverLicenseScreen(
 
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scrollState = rememberScrollState()
+
+    // Real-time expiry feedback
+    val expiryCheck = remember(expiryDate) {
+        if (expiryDate.isNotBlank()) DocumentValidator.validateExpiry(expiryDate, "Driving Licence")
+        else null
+    }
 
     Column(
         modifier = modifier
@@ -104,7 +112,7 @@ fun DriverLicenseScreen(
                         modifier = Modifier.padding(end = 10.dp)
                     )
                     Text(
-                        text = "Must possess a valid Indian Driving Licence authorised for Light Motor Vehicle (LMV) Transport or Commercial operations.",
+                        text = "Must possess a valid Indian Driving Licence authorised for Light Motor Vehicle (LMV) Transport or Commercial operations. Expired licences will be rejected.",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = Color(0xFF92400E),
                             fontSize = 11.sp,
@@ -173,6 +181,27 @@ fun DriverLicenseScreen(
                             )
                         }
                     }
+
+                    // Live Expiry Warning if expired
+                    if (expiryCheck != null && expiryCheck.isExpired) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Error,
+                                contentDescription = null,
+                                tint = ErrorRed,
+                                modifier = Modifier.padding(end = 6.dp)
+                            )
+                            Text(
+                                text = expiryCheck.errorMessage ?: "Licence is expired.",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = ErrorRed,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp
+                                )
+                            )
+                        }
+                    }
                 }
             }
 
@@ -192,7 +221,7 @@ fun DriverLicenseScreen(
                         )
                     )
                     Text(
-                        text = "Clear and unblurred photos showing validity and chip/hologram",
+                        text = "Clear, unblurred photos displaying full validity dates and badge endorsements",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = TextSecondary,
                             fontSize = 11.sp
@@ -222,7 +251,7 @@ fun DriverLicenseScreen(
             }
 
             if (errorMessage != null) {
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = errorMessage!!,
                     style = MaterialTheme.typography.bodySmall.copy(
@@ -237,12 +266,17 @@ fun DriverLicenseScreen(
             RideMitraButton(
                 text = "Next: Vehicle Registration",
                 onClick = {
-                    if (licenseNumber.isBlank()) {
+                    if (licenseNumber.trim().isBlank()) {
                         errorMessage = "Please enter your driving licence number."
                         return@RideMitraButton
                     }
-                    if (issueDate.isBlank() || expiryDate.isBlank()) {
-                        errorMessage = "Please enter both issue date and expiry date."
+                    if (issueDate.trim().isBlank()) {
+                        errorMessage = "Please enter licence issue date."
+                        return@RideMitraButton
+                    }
+                    val validation = DocumentValidator.validateExpiry(expiryDate, "Driving Licence")
+                    if (!validation.isValid) {
+                        errorMessage = validation.errorMessage
                         return@RideMitraButton
                     }
                     if (licenseFrontUri == null || licenseBackUri == null) {
@@ -259,7 +293,7 @@ fun DriverLicenseScreen(
                             issueDate = issueDate.trim(),
                             expiryDate = expiryDate.trim(),
                             licenseCategory = licenseCategory.trim(),
-                            isExpiryValid = true
+                            isExpiryValid = !validation.isExpired
                         )
                     )
                 },

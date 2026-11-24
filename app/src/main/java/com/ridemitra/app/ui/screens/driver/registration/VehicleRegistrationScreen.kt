@@ -42,6 +42,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ridemitra.app.domain.model.VehicleDetails
+import com.ridemitra.app.domain.validation.DocumentValidator
 import com.ridemitra.app.ui.components.AirportIconBadge
 import com.ridemitra.app.ui.components.BadgeVariant
 import com.ridemitra.app.ui.components.DocumentUploadBox
@@ -65,16 +66,15 @@ import com.ridemitra.app.ui.theme.TextSecondary
 
 /**
  * Step 4: Vehicle Registration
- * Collects:
- * - Vehicle registration number
- * - Vehicle manufacturer
- * - Vehicle model
+ * Features:
+ * - Vehicle registration plate number
+ * - Vehicle make & model
  * - Manufacturing year
- * - Vehicle category
- * - Passenger capacity excluding driver
- * - Luggage capacity
- * - Vehicle photographs (Front & Rear)
- * Note: Enforces strict RideMitra passenger threshold = capacity excluding driver - 1.
+ * - Vehicle category (Sedan, SUV, EV, Compact)
+ * - Strict RideMitra N-1 seat capacity rule:
+ *   Maximum passengers = registered passenger seats excluding driver - 1.
+ * - Luggage capacity (bags)
+ * - Vehicle front and rear photos
  */
 @Composable
 fun VehicleRegistrationScreen(
@@ -97,8 +97,8 @@ fun VehicleRegistrationScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scrollState = rememberScrollState()
 
-    // Calculated allowed RideMitra seats (N-1 rule)
-    val allowedCapacity = (passengerCapacity - 1).coerceAtLeast(1)
+    // Calculated allowed RideMitra seats strictly enforcing the N-1 rule
+    val allowedCapacity = DocumentValidator.calculateRideMitraCapacity(passengerCapacity)
 
     Column(
         modifier = modifier
@@ -143,7 +143,7 @@ fun VehicleRegistrationScreen(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "RideMitra passenger threshold = Registered capacity - 1.\nYour $passengerCapacity-passenger cab will accept a maximum of $allowedCapacity riders, guaranteeing luggage room and comfort.",
+                            text = "Maximum passengers = registered passenger seats excluding driver - 1.\nYour $passengerCapacity-seat passenger cab will accept a maximum of $allowedCapacity riders, ensuring space for luggage and co-passenger comfort.",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = Color(0xFF15803D),
                                 lineHeight = 17.sp,
@@ -156,7 +156,7 @@ fun VehicleRegistrationScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Vehicle Specifications Card
+            // Vehicle Identity Form
             RideMitraCard(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = 2.dp
@@ -175,8 +175,8 @@ fun VehicleRegistrationScreen(
                     RideMitraTextField(
                         value = regNumber,
                         onValueChange = { regNumber = it.uppercase() },
-                        label = "Commercial Vehicle Registration Number *",
-                        placeholder = "DL 01 AB 9482 (Yellow Board)",
+                        label = "Vehicle Registration Plate Number *",
+                        placeholder = "KA 01 MJ 4829",
                         leadingIcon = Icons.Default.DirectionsCar
                     )
 
@@ -186,48 +186,83 @@ fun VehicleRegistrationScreen(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Box(modifier = Modifier.weight(1f)) {
+                        Box(modifier = Modifier.weight(1.2f)) {
                             RideMitraTextField(
                                 value = manufacturer,
                                 onValueChange = { manufacturer = it },
                                 label = "Manufacturer *",
-                                placeholder = "e.g. Maruti Suzuki"
+                                placeholder = "Toyota / Maruti"
                             )
                         }
 
-                        Box(modifier = Modifier.weight(1f)) {
+                        Box(modifier = Modifier.weight(1.2f)) {
                             RideMitraTextField(
                                 value = model,
                                 onValueChange = { model = it },
                                 label = "Model Name *",
-                                placeholder = "e.g. Dzire, Aura, Ertiga"
+                                placeholder = "Etios / Dzire"
                             )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(12.dp))
 
+                    RideMitraTextField(
+                        value = manufacturingYear,
+                        onValueChange = { manufacturingYear = it },
+                        label = "Manufacturing Year *",
+                        placeholder = "2022",
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Vehicle Category Selector
+            RideMitraCard(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = 2.dp
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Vehicle Category",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryNavy
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Box(modifier = Modifier.weight(1f)) {
-                            RideMitraTextField(
-                                value = manufacturingYear,
-                                onValueChange = { manufacturingYear = it },
-                                label = "Manufacturing Year *",
-                                placeholder = "e.g. 2022",
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                            )
-                        }
-
-                        Box(modifier = Modifier.weight(1f)) {
-                            RideMitraTextField(
-                                value = vehicleCategory,
-                                onValueChange = { vehicleCategory = it },
-                                label = "Category *",
-                                placeholder = "Sedan, SUV, EV"
-                            )
+                        listOf("Sedan", "SUV", "EV", "Compact").forEach { cat ->
+                            val isSelected = vehicleCategory.equals(cat, ignoreCase = true)
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) RoyalBlue else SurfaceVariantLight)
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (isSelected) RoyalBlue else BorderLight,
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .clickable { vehicleCategory = cat }
+                                    .padding(vertical = 10.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = cat,
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isSelected) Color.White else TextPrimary
+                                    )
+                                )
+                            }
                         }
                     }
                 }
@@ -235,14 +270,14 @@ fun VehicleRegistrationScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Capacity Selector Card
+            // Seating & Luggage Capacity (Strict N-1 Rule Visualizer)
             RideMitraCard(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = 2.dp
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Seating & Boot Capacity",
+                        text = "Seating & Luggage Capacity",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             color = PrimaryNavy
@@ -251,100 +286,168 @@ fun VehicleRegistrationScreen(
 
                     Spacer(modifier = Modifier.height(12.dp))
 
-                    // Registered Capacity Pills
-                    Text(
-                        text = "Registered Passenger Seats (Excluding Driver):",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
-                        )
-                    )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
+                    // Passenger seat stepper
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        listOf(4, 6, 7).forEach { cap ->
-                            val isChosen = passengerCapacity == cap
+                        Column {
+                            Text(
+                                text = "Registered Passenger Seats (Excl. Driver)",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                            )
+                            Text(
+                                text = "Total seats for passengers as registered on RC",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = TextSecondary,
+                                    fontSize = 11.sp
+                                )
+                            )
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(if (isChosen) RoyalBlue else SurfaceVariantLight)
-                                    .border(
-                                        1.dp,
-                                        if (isChosen) RoyalBlue else BorderLight,
-                                        RoundedCornerShape(10.dp)
-                                    )
-                                    .clickable { passengerCapacity = cap }
-                                    .padding(vertical = 10.dp),
+                                    .size(34.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(SurfaceVariantLight)
+                                    .clickable {
+                                        if (passengerCapacity > 3) passengerCapacity--
+                                    },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Text(
-                                        text = "$cap Seats",
-                                        style = MaterialTheme.typography.titleSmall.copy(
-                                            fontWeight = FontWeight.Bold,
-                                            color = if (isChosen) CardBackground else TextPrimary
-                                        )
-                                    )
-                                    Text(
-                                        text = "Max ${cap - 1} Riders",
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            color = if (isChosen) Color(0xFFDBEAFE) else SuccessGreen,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 9.sp
-                                        )
-                                    )
-                                }
+                                Text("-", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = PrimaryNavy)
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Text(
+                                text = "$passengerCapacity",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = PrimaryNavy
+                                )
+                            )
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(SurfaceVariantLight)
+                                    .clickable {
+                                        if (passengerCapacity < 8) passengerCapacity++
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("+", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = PrimaryNavy)
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     HorizontalDivider(color = BorderLight)
-                    Spacer(modifier = Modifier.height(14.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                    // Luggage boot capacity
-                    Text(
-                        text = "Boot Luggage Capacity (Standard Medium Bags):",
-                        style = MaterialTheme.typography.bodySmall.copy(
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
+                    // Allowed RideMitra Capacity Display
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFEFF6FF))
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text(
+                                text = "RideMitra Booking Limit (N-1):",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = PrimaryNavy
+                                )
+                            )
+                            Text(
+                                text = "Platform will NEVER dispatch more riders",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = TextSecondary,
+                                    fontSize = 10.sp
+                                )
+                            )
+                        }
+                        StatusBadge(
+                            text = "MAX $allowedCapacity RIDERS",
+                            variant = BadgeVariant.ROYAL
                         )
-                    )
+                    }
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
+                    // Luggage bags stepper
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        listOf(2, 3, 4, 5).forEach { bags ->
-                            val isChosen = luggageCapacityBags == bags
+                        Column {
+                            Text(
+                                text = "Boot Luggage Capacity (Standard Trolleys)",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                            )
+                            Text(
+                                text = "Large check-in bags boot space",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = TextSecondary,
+                                    fontSize = 11.sp
+                                )
+                            )
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(if (isChosen) TealAccent else SurfaceVariantLight)
-                                    .border(
-                                        1.dp,
-                                        if (isChosen) TealAccent else BorderLight,
-                                        RoundedCornerShape(8.dp)
-                                    )
-                                    .clickable { luggageCapacityBags = bags }
-                                    .padding(vertical = 8.dp),
+                                    .size(34.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(SurfaceVariantLight)
+                                    .clickable {
+                                        if (luggageCapacityBags > 1) luggageCapacityBags--
+                                    },
                                 contentAlignment = Alignment.Center
                             ) {
-                                Text(
-                                    text = "$bags Bags",
-                                    style = MaterialTheme.typography.labelMedium.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = if (isChosen) PrimaryNavy else TextPrimary
-                                    )
+                                Text("-", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = PrimaryNavy)
+                            }
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Text(
+                                text = "$luggageCapacityBags",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = PrimaryNavy
                                 )
+                            )
+
+                            Spacer(modifier = Modifier.width(12.dp))
+
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(SurfaceVariantLight)
+                                    .clickable {
+                                        if (luggageCapacityBags < 6) luggageCapacityBags++
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("+", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = PrimaryNavy)
                             }
                         }
                     }
@@ -360,14 +463,14 @@ fun VehicleRegistrationScreen(
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Vehicle Photographs",
+                        text = "Vehicle Inspection Photographs",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             color = PrimaryNavy
                         )
                     )
                     Text(
-                        text = "Clear pictures showing license number plate and clean interior/exterior",
+                        text = "Clear pictures showing the licence plate clearly visible",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = TextSecondary,
                             fontSize = 11.sp
@@ -377,27 +480,27 @@ fun VehicleRegistrationScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     DocumentUploadBox(
-                        title = "Vehicle Exterior Front",
-                        subtitle = "Clear view with front number plate visible",
+                        title = "Vehicle Front View",
+                        subtitle = "Front angle showing headlights, windshield, and front number plate",
                         uploadedUri = vehicleFrontUri,
-                        onUploadClick = { vehicleFrontUri = "cab_front_exterior.jpg" },
+                        onUploadClick = { vehicleFrontUri = "car_front_angle.jpg" },
                         onRemoveClick = { vehicleFrontUri = null }
                     )
 
                     Spacer(modifier = Modifier.height(10.dp))
 
                     DocumentUploadBox(
-                        title = "Vehicle Exterior Rear / Boot",
-                        subtitle = "Showing rear number plate and open boot space",
+                        title = "Vehicle Rear View",
+                        subtitle = "Rear angle showing boot and rear number plate",
                         uploadedUri = vehicleRearUri,
-                        onUploadClick = { vehicleRearUri = "cab_rear_boot.jpg" },
+                        onUploadClick = { vehicleRearUri = "car_rear_angle.jpg" },
                         onRemoveClick = { vehicleRearUri = null }
                     )
                 }
             }
 
             if (errorMessage != null) {
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = errorMessage!!,
                     style = MaterialTheme.typography.bodySmall.copy(
@@ -410,22 +513,28 @@ fun VehicleRegistrationScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             RideMitraButton(
-                text = "Next: Vehicle Document Submission",
+                text = "Next: Regulatory Documents",
                 onClick = {
-                    if (regNumber.isBlank()) {
-                        errorMessage = "Please enter vehicle registration number."
+                    val plateCheck = DocumentValidator.validateVehiclePlate(regNumber)
+                    if (!plateCheck.isValid) {
+                        errorMessage = plateCheck.errorMessage
                         return@RideMitraButton
                     }
-                    if (manufacturer.isBlank() || model.isBlank()) {
-                        errorMessage = "Please enter vehicle manufacturer and model."
+                    if (manufacturer.trim().isBlank()) {
+                        errorMessage = "Please enter vehicle manufacturer."
                         return@RideMitraButton
                     }
-                    if (manufacturingYear.isBlank()) {
-                        errorMessage = "Please enter manufacturing year."
+                    if (model.trim().isBlank()) {
+                        errorMessage = "Please enter vehicle model."
+                        return@RideMitraButton
+                    }
+                    val yearInt = manufacturingYear.trim().toIntOrNull()
+                    if (yearInt == null || yearInt < 2005 || yearInt > 2030) {
+                        errorMessage = "Please enter a valid 4-digit manufacturing year (2005 or newer)."
                         return@RideMitraButton
                     }
                     if (vehicleFrontUri == null || vehicleRearUri == null) {
-                        errorMessage = "Please upload both front and rear vehicle photos."
+                        errorMessage = "Please upload both front and rear photos of your vehicle."
                         return@RideMitraButton
                     }
 

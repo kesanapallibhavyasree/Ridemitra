@@ -15,6 +15,7 @@ val TextPrimary = Color(0xFF172333)
 val TextSecondary = Color(0xFF5A6E85)
 val TextMuted = Color(0xFF8C9BAE)
 val BorderLight = Color(0xFFE2E8F0)
+val DividerLight = Color(0xFFE2E8F0)
 val SurfaceVariantLight = Color(0xFFEEF2F6)
 
 // Functional & State Tones

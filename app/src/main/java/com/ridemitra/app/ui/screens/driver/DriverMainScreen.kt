@@ -69,6 +69,7 @@ import com.ridemitra.app.ui.screens.driver.registration.VehicleDocumentsScreen
 import com.ridemitra.app.ui.screens.driver.registration.VehicleRegistrationScreen
 import com.ridemitra.app.ui.screens.driver.verification.DriverVerificationStatusScreen
 import com.ridemitra.app.ui.theme.BackgroundLight
+import com.ridemitra.app.ui.theme.ErrorRed
 import com.ridemitra.app.ui.theme.PrimaryNavy
 import com.ridemitra.app.ui.theme.RoyalBlue
 import com.ridemitra.app.ui.theme.SuccessGreen
@@ -96,10 +97,12 @@ fun DriverMainScreen(
 ) {
     var flowMode by remember { mutableStateOf(DriverFlowMode.DASHBOARD) }
     var currentTab by remember { mutableStateOf<BottomNavItem>(BottomNavItem.DriverHome) }
+    var returnToReviewAfterEdit by remember { mutableStateOf(false) }
+
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
 
-    // 1. Realistic Driver Application Data
+    // 1. Driver Application Data with valid dates by default
     var application by remember {
         mutableStateOf(
             DriverApplication(
@@ -121,17 +124,18 @@ fun DriverMainScreen(
                     documentNumberMasked = "XXXX-XXXX-4920",
                     documentFrontUri = "content://media/aadhaar_front.jpg",
                     documentBackUri = "content://media/aadhaar_back.jpg",
-                    panNumberMasked = "ABCDE****F",
+                    panNumberMasked = "ABCDE1234F",
                     panCardUri = "content://media/pan_card.jpg",
                     addressProofUri = "content://media/address_proof.jpg",
-                    selfiePhotoUri = "content://media/live_selfie.jpg"
+                    selfiePhotoUri = "content://media/live_selfie.jpg",
+                    isPanConfiguredMandatory = false
                 ),
                 licenseInfo = DriverLicenseInfo(
                     licenseNumber = "KA01-20150048291",
                     licenseFrontUri = "content://media/dl_front.jpg",
                     licenseBackUri = "content://media/dl_back.jpg",
                     issueDate = "15/03/2015",
-                    expiryDate = "14/03/2035",
+                    expiryDate = "14/03/2035", // Valid
                     licenseCategory = "Commercial / LMV Transport",
                     isExpiryValid = true
                 ),
@@ -150,13 +154,14 @@ fun DriverMainScreen(
                     rcNumber = "KA01MJ4829",
                     rcDocUri = "content://media/rc_doc.jpg",
                     insurancePolicyNumber = "BAJAJ-ALLIANZ-COMM-4892",
-                    insuranceExpiryDate = "28/11/2026",
+                    insuranceExpiryDate = "28/11/2027", // Valid
                     insuranceDocUri = "content://media/insurance.jpg",
-                    pucExpiryDate = "10/05/2026",
+                    pucExpiryDate = "10/05/2027", // Valid
                     pucDocUri = "content://media/puc.jpg",
-                    fitnessExpiryDate = "14/03/2028",
+                    fitnessExpiryDate = "14/03/2028", // Valid
                     fitnessDocUri = "content://media/fitness.jpg",
-                    commercialPermitUri = "content://media/permit.jpg"
+                    commercialPermitUri = "content://media/permit.jpg",
+                    commercialPermitExpiryDate = "15/06/2028" // Valid
                 ),
                 status = DriverVerificationStatus.APPROVED,
                 submissionDate = "18 Nov 2026, 10:30 AM",
@@ -168,7 +173,7 @@ fun DriverMainScreen(
     // 2. Online / Offline state
     var isOnline by remember { mutableStateOf(true) }
 
-    // 3. Incoming Booking Requests (Sample airport dispatch)
+    // 3. Incoming Booking Requests (Demo dispatch data)
     var incomingRequests by remember {
         mutableStateOf(
             listOf(
@@ -184,7 +189,8 @@ fun DriverMainScreen(
                     estimatedDriverPayout = 540.0,
                     platformCommission = 54.0,
                     rideType = RideOptionType.SHARED_POOL,
-                    flightNumber = "6E-512 (Landed)"
+                    flightNumber = "6E-512 (Landed)",
+                    isDemoRequest = true
                 ),
                 DriverBookingRequest(
                     requestId = "REQ-BLR-9022",
@@ -197,14 +203,15 @@ fun DriverMainScreen(
                     requestedDepartureTime = "Today, in 25 mins",
                     estimatedDriverPayout = 680.0,
                     platformCommission = 68.0,
-                    rideType = RideOptionType.SOLO_RIDE, // Eligible for 10% platform discount; 100% driver payout protected
-                    flightNumber = "AI-804 (Arrived)"
+                    rideType = RideOptionType.SOLO_RIDE,
+                    flightNumber = "AI-804 (Arrived)",
+                    isDemoRequest = true
                 )
             )
         )
     }
 
-    // 4. Active Ongoing Ride
+    // 4. Active Ongoing Ride (Demo active trip)
     var activeRide by remember {
         mutableStateOf<DriverActiveRide?>(
             DriverActiveRide(
@@ -221,21 +228,24 @@ fun DriverMainScreen(
                 status = DriverRideStatus.ACCEPTED,
                 expectedOtp = "4829",
                 driverPayout = 580.0,
-                remainingCashToCollect = 522.0
+                remainingCashToCollect = 522.0,
+                isDemoRide = true
             )
         )
     }
 
-    // 5. Driver Earnings Ledger
+    // 5. Driver Earnings Ledger (Labeled as DEMO DATA)
     var earningsSummary by remember {
         mutableStateOf(
             DriverEarningsSummary(
+                isDemoData = true,
                 todayNetEarnings = 1377.0,
                 weeklyNetEarnings = 8450.0,
                 monthlyNetEarnings = 34200.0,
                 todayCompletedTrips = 2,
                 totalCompletedTrips = 312,
                 driverRating = 4.88,
+                hasLiveRating = false,
                 pendingPayoutBalance = 1377.0,
                 platformCommissionDeductedToday = 153.0,
                 recentTransactions = listOf(
@@ -246,7 +256,8 @@ fun DriverMainScreen(
                         totalPassengerFare = 890.0,
                         platformCommission = 89.0,
                         netDriverPayout = 801.0,
-                        paymentMode = "NEFT direct to HDFC A/C **4920"
+                        paymentMode = "NEFT direct to HDFC A/C **4920",
+                        isDemoData = true
                     ),
                     DriverEarningsTransaction(
                         tripId = "TRIP-BLR-8910",
@@ -255,7 +266,8 @@ fun DriverMainScreen(
                         totalPassengerFare = 640.0,
                         platformCommission = 64.0,
                         netDriverPayout = 576.0,
-                        paymentMode = "Instant IMPS to HDFC A/C **4920"
+                        paymentMode = "Instant IMPS to HDFC A/C **4920",
+                        isDemoData = true
                     )
                 )
             )
@@ -286,7 +298,7 @@ fun DriverMainScreen(
                 .background(BackgroundLight)
                 .padding(innerPadding)
         ) {
-            // Quick Developer & Review Toolbar (Enables testing all 7 verification states & onboarding wizard)
+            // Quick Developer & Review Toolbar
             AnimatedVisibility(visible = showDevBar) {
                 Column(
                     modifier = Modifier
@@ -340,7 +352,7 @@ fun DriverMainScreen(
                         FilterChip(
                             selected = flowMode == DriverFlowMode.DASHBOARD,
                             onClick = { flowMode = DriverFlowMode.DASHBOARD },
-                            label = { Text("Dashboard (5 Tabs)", fontSize = 10.sp) },
+                            label = { Text("Dashboard", fontSize = 10.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = RoyalBlue,
                                 selectedLabelColor = Color.White
@@ -350,7 +362,7 @@ fun DriverMainScreen(
                         FilterChip(
                             selected = flowMode == DriverFlowMode.VERIFICATION_STATUS,
                             onClick = { flowMode = DriverFlowMode.VERIFICATION_STATUS },
-                            label = { Text("Verification Screen", fontSize = 10.sp) },
+                            label = { Text("Verification Status", fontSize = 10.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = RoyalBlue,
                                 selectedLabelColor = Color.White
@@ -359,38 +371,74 @@ fun DriverMainScreen(
 
                         FilterChip(
                             selected = flowMode == DriverFlowMode.REG_STEP_1_PERSONAL,
-                            onClick = { flowMode = DriverFlowMode.REG_STEP_1_PERSONAL },
-                            label = { Text("Onboarding Wizard (1-6)", fontSize = 10.sp) },
+                            onClick = {
+                                returnToReviewAfterEdit = false
+                                flowMode = DriverFlowMode.REG_STEP_1_PERSONAL
+                            },
+                            label = { Text("Onboarding Wizard (1-5)", fontSize = 10.sp) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = RoyalBlue,
                                 selectedLabelColor = Color.White
                             )
                         )
 
-                        // Quick switcher for the 7 Verification Statuses when testing
-                        if (flowMode == DriverFlowMode.VERIFICATION_STATUS || flowMode == DriverFlowMode.DASHBOARD) {
-                            Text(
-                                text = "| Status:",
-                                color = Color.White.copy(alpha = 0.5f),
-                                fontSize = 10.sp
-                            )
-                            DriverVerificationStatus.values().forEach { st ->
-                                FilterChip(
-                                    selected = application.status == st,
-                                    onClick = {
-                                        application = application.copy(status = st)
-                                        scope.launch {
-                                            snackbarHostState.showSnackbar("Switched status to: ${st.label}")
-                                        }
-                                    },
-                                    label = { Text(st.name, fontSize = 9.sp) },
-                                    colors = FilterChipDefaults.filterChipColors(
-                                        selectedContainerColor = SuccessGreen,
-                                        selectedLabelColor = Color.White
-                                    )
+                        // Quick switcher for all 6 verification statuses
+                        Text(
+                            text = "| Status:",
+                            color = Color.White.copy(alpha = 0.5f),
+                            fontSize = 10.sp
+                        )
+                        DriverVerificationStatus.entries.forEach { st ->
+                            FilterChip(
+                                selected = application.status == st,
+                                onClick = {
+                                    application = application.copy(status = st)
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("Switched status to: ${st.label}")
+                                    }
+                                },
+                                label = { Text(st.name, fontSize = 9.sp) },
+                                colors = FilterChipDefaults.filterChipColors(
+                                    selectedContainerColor = SuccessGreen,
+                                    selectedLabelColor = Color.White
                                 )
-                            }
+                            )
                         }
+
+                        // Quick Test: Simulate Expired Documents
+                        FilterChip(
+                            selected = application.hasExpiredDocuments,
+                            onClick = {
+                                if (application.hasExpiredDocuments) {
+                                    // Reset to valid dates
+                                    application = application.copy(
+                                        licenseInfo = application.licenseInfo.copy(expiryDate = "14/03/2035"),
+                                        vehicleDocs = application.vehicleDocs.copy(
+                                            insuranceExpiryDate = "28/11/2027",
+                                            pucExpiryDate = "10/05/2027"
+                                        ),
+                                        status = DriverVerificationStatus.APPROVED
+                                    )
+                                    scope.launch { snackbarHostState.showSnackbar("Restored valid document dates.") }
+                                } else {
+                                    // Set expired dates
+                                    application = application.copy(
+                                        licenseInfo = application.licenseInfo.copy(expiryDate = "10/01/2023"), // Expired
+                                        vehicleDocs = application.vehicleDocs.copy(
+                                            insuranceExpiryDate = "15/04/2024", // Expired
+                                            pucExpiryDate = "01/01/2024" // Expired
+                                        ),
+                                        status = DriverVerificationStatus.EXPIRED
+                                    )
+                                    scope.launch { snackbarHostState.showSnackbar("Simulated expired documents! Dispatch is now blocked.") }
+                                }
+                            },
+                            label = { Text(if (application.hasExpiredDocuments) "Fix Expired Docs" else "Test Expired Docs", fontSize = 9.sp) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = ErrorRed,
+                                selectedLabelColor = Color.White
+                            )
+                        )
                     }
                 }
             }
@@ -418,28 +466,40 @@ fun DriverMainScreen(
                             is BottomNavItem.DriverRequests -> {
                                 DriverRequestsScreen(
                                     requests = incomingRequests,
+                                    isEligibleForBookings = application.isEligibleForBookings,
+                                    eligibilityBlockReason = if (application.hasExpiredDocuments)
+                                        "Dispatch Ineligible: Regulatory document(s) expired. Renew to accept rides."
+                                    else if (application.status != DriverVerificationStatus.APPROVED)
+                                        "Dispatch Ineligible: Account is ${application.status.label}. Approval required."
+                                    else null,
                                     onAcceptRequest = { req ->
-                                        // Transition request to active ride
-                                        activeRide = DriverActiveRide(
-                                            bookingId = "RM-BK-${req.requestId.takeLast(4)}",
-                                            passengerName = "Verified Passenger",
-                                            passengerPhone = "+91 98450 11990",
-                                            pickupPillar = req.passengerPickup,
-                                            destination = req.destination,
-                                            distanceKm = req.distanceKm,
-                                            estimatedDurationMinutes = req.estimatedDurationMinutes,
-                                            passengerCount = req.passengerCount,
-                                            luggageSummary = req.luggageSummary,
-                                            rideType = req.rideType,
-                                            status = DriverRideStatus.ACCEPTED,
-                                            expectedOtp = "4829",
-                                            driverPayout = req.estimatedDriverPayout,
-                                            remainingCashToCollect = req.estimatedDriverPayout * 0.90
-                                        )
-                                        incomingRequests = incomingRequests.filter { it.requestId != req.requestId }
-                                        currentTab = BottomNavItem.DriverActiveRides
-                                        scope.launch {
-                                            snackbarHostState.showSnackbar("Request ${req.requestId} accepted! Active trip started.")
+                                        if (application.isEligibleForBookings) {
+                                            activeRide = DriverActiveRide(
+                                                bookingId = "RM-BK-${req.requestId.takeLast(4)}",
+                                                passengerName = "Verified Passenger",
+                                                passengerPhone = "+91 98450 11990",
+                                                pickupPillar = req.passengerPickup,
+                                                destination = req.destination,
+                                                distanceKm = req.distanceKm,
+                                                estimatedDurationMinutes = req.estimatedDurationMinutes,
+                                                passengerCount = req.passengerCount,
+                                                luggageSummary = req.luggageSummary,
+                                                rideType = req.rideType,
+                                                status = DriverRideStatus.ACCEPTED,
+                                                expectedOtp = "4829",
+                                                driverPayout = req.estimatedDriverPayout,
+                                                remainingCashToCollect = req.estimatedDriverPayout * 0.90,
+                                                isDemoRide = true
+                                            )
+                                            incomingRequests = incomingRequests.filter { it.requestId != req.requestId }
+                                            currentTab = BottomNavItem.DriverActiveRides
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar("Request ${req.requestId} accepted! Active trip started.")
+                                            }
+                                        } else {
+                                            scope.launch {
+                                                snackbarHostState.showSnackbar("Cannot accept request: Account is not approved or documents are expired.")
+                                            }
                                         }
                                     },
                                     onRejectRequest = { req ->
@@ -477,7 +537,8 @@ fun DriverMainScreen(
                                                 totalPassengerFare = completed.driverPayout * 1.10,
                                                 platformCommission = completed.driverPayout * 0.10,
                                                 netDriverPayout = completed.driverPayout,
-                                                paymentMode = "Direct Bank Settlement"
+                                                paymentMode = "Direct Bank Settlement",
+                                                isDemoData = true
                                             )
                                             earningsSummary = earningsSummary.copy(
                                                 todayNetEarnings = earningsSummary.todayNetEarnings + completed.driverPayout,
@@ -487,7 +548,7 @@ fun DriverMainScreen(
                                             )
                                             activeRide = null
                                             scope.launch {
-                                                snackbarHostState.showSnackbar("Trip completed! ₹${completed.driverPayout} added to Net Payouts.")
+                                                snackbarHostState.showSnackbar("Trip completed! ₹${completed.driverPayout.toInt()} added to Net Payouts.")
                                             }
                                         }
                                     }
@@ -504,7 +565,7 @@ fun DriverMainScreen(
                                     },
                                     onRequestInstantPayout = {
                                         scope.launch {
-                                            snackbarHostState.showSnackbar("Instant payout of ₹${earningsSummary.todayNetEarnings} queued to HDFC Bank A/C **4920.")
+                                            snackbarHostState.showSnackbar("Instant payout of ₹${earningsSummary.todayNetEarnings.toInt()} queued to bank account.")
                                         }
                                     }
                                 )
@@ -514,6 +575,7 @@ fun DriverMainScreen(
                                 DriverProfileScreen(
                                     application = application,
                                     onEditSection = { step ->
+                                        returnToReviewAfterEdit = false
                                         flowMode = when (step) {
                                             1 -> DriverFlowMode.REG_STEP_1_PERSONAL
                                             2 -> DriverFlowMode.REG_STEP_2_IDENTITY
@@ -551,13 +613,21 @@ fun DriverMainScreen(
                         DriverVerificationStatusScreen(
                             application = application,
                             onStartOrResumeRegistration = {
+                                returnToReviewAfterEdit = false
                                 flowMode = DriverFlowMode.REG_STEP_1_PERSONAL
                             },
                             onEnterDashboardIfApproved = {
-                                flowMode = DriverFlowMode.DASHBOARD
-                                currentTab = BottomNavItem.DriverHome
+                                if (application.isEligibleForBookings) {
+                                    flowMode = DriverFlowMode.DASHBOARD
+                                    currentTab = BottomNavItem.DriverHome
+                                } else {
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("Cannot enter dashboard as active driver: Document(s) expired.")
+                                    }
+                                }
                             },
                             onReUploadDocuments = { step ->
+                                returnToReviewAfterEdit = true
                                 flowMode = when (step) {
                                     1 -> DriverFlowMode.REG_STEP_1_PERSONAL
                                     2 -> DriverFlowMode.REG_STEP_2_IDENTITY
@@ -578,9 +648,11 @@ fun DriverMainScreen(
                             initialData = application.personalInfo,
                             onSaveAndNext = { updatedPersonal ->
                                 application = application.copy(personalInfo = updatedPersonal)
-                                flowMode = DriverFlowMode.REG_STEP_2_IDENTITY
+                                flowMode = if (returnToReviewAfterEdit) DriverFlowMode.REG_STEP_6_REVIEW else DriverFlowMode.REG_STEP_2_IDENTITY
                             },
-                            onBackClick = { flowMode = DriverFlowMode.DASHBOARD }
+                            onBackClick = {
+                                flowMode = if (returnToReviewAfterEdit) DriverFlowMode.REG_STEP_6_REVIEW else DriverFlowMode.DASHBOARD
+                            }
                         )
                     }
 
@@ -589,9 +661,11 @@ fun DriverMainScreen(
                             initialData = application.identityDocs,
                             onSaveAndNext = { updatedIdentity ->
                                 application = application.copy(identityDocs = updatedIdentity)
-                                flowMode = DriverFlowMode.REG_STEP_3_LICENSE
+                                flowMode = if (returnToReviewAfterEdit) DriverFlowMode.REG_STEP_6_REVIEW else DriverFlowMode.REG_STEP_3_LICENSE
                             },
-                            onBackClick = { flowMode = DriverFlowMode.REG_STEP_1_PERSONAL }
+                            onBackClick = {
+                                flowMode = if (returnToReviewAfterEdit) DriverFlowMode.REG_STEP_6_REVIEW else DriverFlowMode.REG_STEP_1_PERSONAL
+                            }
                         )
                     }
 
@@ -600,9 +674,11 @@ fun DriverMainScreen(
                             initialData = application.licenseInfo,
                             onSaveAndNext = { updatedLicense ->
                                 application = application.copy(licenseInfo = updatedLicense)
-                                flowMode = DriverFlowMode.REG_STEP_4_VEHICLE
+                                flowMode = if (returnToReviewAfterEdit) DriverFlowMode.REG_STEP_6_REVIEW else DriverFlowMode.REG_STEP_4_VEHICLE
                             },
-                            onBackClick = { flowMode = DriverFlowMode.REG_STEP_2_IDENTITY }
+                            onBackClick = {
+                                flowMode = if (returnToReviewAfterEdit) DriverFlowMode.REG_STEP_6_REVIEW else DriverFlowMode.REG_STEP_2_IDENTITY
+                            }
                         )
                     }
 
@@ -611,9 +687,11 @@ fun DriverMainScreen(
                             initialData = application.vehicleDetails,
                             onSaveAndNext = { updatedVehicle ->
                                 application = application.copy(vehicleDetails = updatedVehicle)
-                                flowMode = DriverFlowMode.REG_STEP_5_DOCUMENTS
+                                flowMode = if (returnToReviewAfterEdit) DriverFlowMode.REG_STEP_6_REVIEW else DriverFlowMode.REG_STEP_5_DOCUMENTS
                             },
-                            onBackClick = { flowMode = DriverFlowMode.REG_STEP_3_LICENSE }
+                            onBackClick = {
+                                flowMode = if (returnToReviewAfterEdit) DriverFlowMode.REG_STEP_6_REVIEW else DriverFlowMode.REG_STEP_3_LICENSE
+                            }
                         )
                     }
 
@@ -621,10 +699,15 @@ fun DriverMainScreen(
                         VehicleDocumentsScreen(
                             initialData = application.vehicleDocs,
                             onSaveAndNext = { updatedDocs ->
-                                application = application.copy(vehicleDocs = updatedDocs)
+                                application = application.copy(
+                                    vehicleDocs = updatedDocs,
+                                    status = DriverVerificationStatus.UPLOADED // Separate UPLOADED status
+                                )
                                 flowMode = DriverFlowMode.REG_STEP_6_REVIEW
                             },
-                            onBackClick = { flowMode = DriverFlowMode.REG_STEP_4_VEHICLE }
+                            onBackClick = {
+                                flowMode = if (returnToReviewAfterEdit) DriverFlowMode.REG_STEP_6_REVIEW else DriverFlowMode.REG_STEP_4_VEHICLE
+                            }
                         )
                     }
 
@@ -632,6 +715,7 @@ fun DriverMainScreen(
                         DriverReviewScreen(
                             application = application,
                             onEditStep = { step ->
+                                returnToReviewAfterEdit = true
                                 flowMode = when (step) {
                                     1 -> DriverFlowMode.REG_STEP_1_PERSONAL
                                     2 -> DriverFlowMode.REG_STEP_2_IDENTITY
@@ -642,16 +726,34 @@ fun DriverMainScreen(
                                 }
                             },
                             onSubmitApplication = {
-                                application = application.copy(
-                                    status = DriverVerificationStatus.UNDER_REVIEW,
-                                    submissionDate = "Just now"
-                                )
-                                flowMode = DriverFlowMode.VERIFICATION_STATUS
-                                scope.launch {
-                                    snackbarHostState.showSnackbar("Application submitted successfully! Queued for Admin Review.")
+                                val expired = application.getExpiredDocuments()
+                                if (expired.isNotEmpty()) {
+                                    application = application.copy(
+                                        status = DriverVerificationStatus.EXPIRED,
+                                        submissionDate = "Just now",
+                                        adminFeedback = "Application blocked: ${expired.first()}"
+                                    )
+                                    flowMode = DriverFlowMode.VERIFICATION_STATUS
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("Cannot approve: Expired document(s) detected.")
+                                    }
+                                } else {
+                                    // NEVER AUTOMATICALLY APPROVE: Transitions to PENDING_REVIEW
+                                    application = application.copy(
+                                        status = DriverVerificationStatus.PENDING_REVIEW,
+                                        submissionDate = "Just now",
+                                        adminFeedback = null
+                                    )
+                                    flowMode = DriverFlowMode.VERIFICATION_STATUS
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar("Application submitted successfully! Now pending compliance review.")
+                                    }
                                 }
                             },
-                            onBackClick = { flowMode = DriverFlowMode.REG_STEP_5_DOCUMENTS }
+                            onBackClick = {
+                                returnToReviewAfterEdit = false
+                                flowMode = DriverFlowMode.REG_STEP_5_DOCUMENTS
+                            }
                         )
                     }
                 }

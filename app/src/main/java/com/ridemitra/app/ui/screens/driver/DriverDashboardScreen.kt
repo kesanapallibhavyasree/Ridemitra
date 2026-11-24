@@ -198,7 +198,7 @@ fun DriverDashboardScreen(
                         )
                     )
                     Text(
-                        text = if (isOnline) "GPS active at IGI Terminal 3 Cab Hub" else "Toggle switch to start receiving rides",
+                        text = if (isOnline) "GPS Availability: Simulated Location [DEMO DATA]" else "Toggle switch to start receiving rides",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = if (isOnline) Color(0xFF15803D) else TextMuted
                         )
@@ -233,17 +233,24 @@ fun DriverDashboardScreen(
                 elevation = 4.dp
             ) {
                 Column {
-                    Text(
-                        text = "TODAY'S EARNINGS",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = TealAccent,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "TODAY'S EARNINGS",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = TealAccent,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp
+                            )
                         )
-                    )
+                        StatusBadge(text = "DEMO DATA", variant = BadgeVariant.NEUTRAL)
+                    }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        text = "₹2,840",
+                        text = "₹2,840 [DEMO]",
                         style = MaterialTheme.typography.headlineMedium.copy(
                             fontWeight = FontWeight.ExtraBold,
                             color = CardBackground
@@ -251,7 +258,7 @@ fun DriverDashboardScreen(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "5 Airport Trips • 100% Payout",
+                        text = "5 Airport Trips [DEMO] • 100% Payout",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = Color(0xFF94A3B8),
                             fontSize = 11.sp
@@ -321,11 +328,11 @@ fun DriverDashboardScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     StatusBadge(
-                        text = "SHARED AIRPORT POOL (2 RIDERS)",
+                        text = "SHARED AIRPORT POOL [DEMO DATA]",
                         variant = BadgeVariant.TEAL
                     )
                     Text(
-                        text = "₹980 Fare",
+                        text = "₹980 Fare [DEMO]",
                         style = MaterialTheme.typography.titleLarge.copy(
                             fontWeight = FontWeight.ExtraBold,
                             color = PrimaryNavy

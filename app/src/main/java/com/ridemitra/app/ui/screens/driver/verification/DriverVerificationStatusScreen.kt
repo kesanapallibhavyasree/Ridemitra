@@ -30,13 +30,14 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.SupportAgent
+import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -73,16 +74,14 @@ import com.ridemitra.app.ui.theme.WarningAmber
 
 /**
  * Driver Verification Status Screen.
- * Implements professional UI states for all 7 statuses:
- * - NOT_SUBMITTED
- * - PENDING_VERIFICATION
- * - UNDER_REVIEW
- * - APPROVED
- * - REJECTED
- * - SUSPENDED
- * - EXPIRED
- * Note: Clearly displays that the application is awaiting real admin review
- * and never generates fake verification successes.
+ * Strictly maintains and visualizes separate statuses:
+ * - NOT_SUBMITTED: Registration form incomplete
+ * - UPLOADED: Documents uploaded, ready for submission
+ * - PENDING_REVIEW: Submitted, under compliance desk review
+ * - APPROVED: Active & approved (blocked if documents expired)
+ * - REJECTED: Changes required by compliance desk
+ * - EXPIRED: Regulatory document(s) expired; booking eligibility blocked
+ * - SUSPENDED: Temporarily suspended for audit
  */
 @Composable
 fun DriverVerificationStatusScreen(
@@ -95,47 +94,60 @@ fun DriverVerificationStatusScreen(
 ) {
     val scrollState = rememberScrollState()
     val context = LocalContext.current
-    val status = application.status
+    val expiredDocs = remember(application) { application.getExpiredDocuments() }
+    val effectiveStatus = if (application.hasExpiredDocuments && application.status == DriverVerificationStatus.APPROVED) {
+        DriverVerificationStatus.EXPIRED
+    } else {
+        application.status
+    }
 
-    val (statusColor, statusBg, statusIcon, statusHeadline, statusExplanation) = when (status) {
+    val (statusColor, statusBg, statusIcon, statusHeadline, statusExplanation) = when (effectiveStatus) {
         DriverVerificationStatus.NOT_SUBMITTED -> Quintuple(
             RoyalBlue,
             Color(0xFFEFF6FF),
             Icons.Default.Info,
-            "Onboarding Incomplete",
-            "You have not completed your commercial driver registration. Submit your driving licence and vehicle RC to begin airport operations."
+            "Registration Incomplete",
+            "You have not completed your commercial driver registration. Submit your personal details, driving licence, and vehicle RC to begin onboarding."
         )
 
-        DriverVerificationStatus.PENDING_VERIFICATION -> Quintuple(
+        DriverVerificationStatus.UPLOADED -> Quintuple(
+            RoyalBlue,
+            Color(0xFFEFF6FF),
+            Icons.Default.UploadFile,
+            "Documents Uploaded",
+            "Your registration details and document scans have been saved. Review your application and submit it for compliance review."
+        )
+
+        DriverVerificationStatus.PENDING_REVIEW -> Quintuple(
             WarningAmber,
             Color(0xFFFEF3C7),
-            Icons.Default.Schedule,
-            "Verification Documents Queued",
-            "Your registration documents have been uploaded and are queued in the verification pipeline. Government database cross-checks are pending."
-        )
-
-        DriverVerificationStatus.UNDER_REVIEW -> Quintuple(
-            RoyalBlue,
-            Color(0xFFDBEAFE),
             Icons.Default.HourglassTop,
-            "Under Admin Review",
-            "Your application (#${application.applicationId}) is currently being reviewed by the RideMitra Airport Operations Compliance Desk. Expected turnaround: 24–48 hours."
+            "Pending Compliance Review",
+            "Your application (#${application.applicationId}) is currently being reviewed by the RideMitra compliance team. Review takes approximately 24–48 hours."
         )
 
         DriverVerificationStatus.APPROVED -> Quintuple(
             SuccessGreen,
             Color(0xFFE6F9F2),
             Icons.Default.CheckCircle,
-            "Application Approved & Active",
-            "Your driving licence, background check, and commercial vehicle papers have been verified. You are eligible to receive airport ride dispatches."
+            "Application Approved",
+            "Your driving licence, vehicle documents, and identity details have been verified. You are authorized to accept airport passenger dispatches."
         )
 
         DriverVerificationStatus.REJECTED -> Quintuple(
             ErrorRed,
             Color(0xFFFEF2F2),
             Icons.Default.Error,
-            "Action Required on Application",
-            "One or more submitted documents could not be verified by our compliance team. Please review admin remarks and re-upload clear copies."
+            "Action Required / Rejected",
+            "One or more submitted documents did not meet verification criteria. Please review compliance remarks below and re-upload clear documents."
+        )
+
+        DriverVerificationStatus.EXPIRED -> Quintuple(
+            ErrorRed,
+            Color(0xFFFEF2F2),
+            Icons.Default.Warning,
+            "Regulatory Document(s) Expired",
+            "One or more required documents have expired. Booking eligibility is strictly blocked until valid renewed documents are submitted and verified."
         )
 
         DriverVerificationStatus.SUSPENDED -> Quintuple(
@@ -143,15 +155,7 @@ fun DriverVerificationStatusScreen(
             Color(0xFFFEE2E2),
             Icons.Default.Warning,
             "Account Suspended",
-            "Your driver partner account has been temporarily suspended due to a compliance or safety audit. Please contact RideMitra Driver Support immediately."
-        )
-
-        DriverVerificationStatus.EXPIRED -> Quintuple(
-            WarningAmber,
-            Color(0xFFFEF3C7),
-            Icons.Default.Warning,
-            "Regulatory Documents Expired",
-            "Your commercial insurance, fitness certificate, or driving licence has passed its expiration date. Re-upload updated valid documents to resume accepting airport trips."
+            "Your driver partner account has been temporarily suspended due to a compliance or safety audit. Please contact RideMitra Driver Support."
         )
     }
 
@@ -203,11 +207,11 @@ fun DriverVerificationStatusScreen(
             Spacer(modifier = Modifier.height(6.dp))
 
             StatusBadge(
-                text = status.label.uppercase(),
-                variant = when (status) {
+                text = effectiveStatus.label.uppercase(),
+                variant = when (effectiveStatus) {
                     DriverVerificationStatus.APPROVED -> BadgeVariant.SUCCESS
-                    DriverVerificationStatus.REJECTED, DriverVerificationStatus.SUSPENDED -> BadgeVariant.WARNING
-                    DriverVerificationStatus.UNDER_REVIEW, DriverVerificationStatus.PENDING_VERIFICATION -> BadgeVariant.ROYAL
+                    DriverVerificationStatus.REJECTED, DriverVerificationStatus.EXPIRED, DriverVerificationStatus.SUSPENDED -> BadgeVariant.WARNING
+                    DriverVerificationStatus.PENDING_REVIEW, DriverVerificationStatus.UPLOADED -> BadgeVariant.ROYAL
                     else -> BadgeVariant.NEUTRAL
                 }
             )
@@ -224,10 +228,52 @@ fun DriverVerificationStatusScreen(
                 modifier = Modifier.padding(horizontal = 8.dp)
             )
 
-            Spacer(modifier = Modifier.height(20.dp))
+            // Expired Documents Alert Box
+            if (expiredDocs.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                RideMitraCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    backgroundColor = Color(0xFFFEF2F2),
+                    borderColor = Color(0xFFFECDD3),
+                    elevation = 2.dp
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.Error,
+                                contentDescription = null,
+                                tint = ErrorRed,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "Dispatch & Booking Eligibility Blocked",
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    color = ErrorRed
+                                )
+                            )
+                        }
 
-            // Admin Feedback Box (If rejected, expired, or remarks available)
-            if (status == DriverVerificationStatus.REJECTED || application.adminFeedback != null) {
+                        Spacer(modifier = Modifier.height(6.dp))
+
+                        expiredDocs.forEach { exp ->
+                            Text(
+                                text = "• $exp",
+                                style = MaterialTheme.typography.bodySmall.copy(
+                                    color = Color(0xFF991B1B),
+                                    fontSize = 11.sp,
+                                    lineHeight = 17.sp
+                                )
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Compliance Remarks Box
+            if (application.adminFeedback != null && effectiveStatus == DriverVerificationStatus.REJECTED) {
+                Spacer(modifier = Modifier.height(16.dp))
                 RideMitraCard(
                     modifier = Modifier.fillMaxWidth(),
                     backgroundColor = Color(0xFFFEF2F2),
@@ -255,7 +301,7 @@ fun DriverVerificationStatusScreen(
                         Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
-                            text = application.adminFeedback ?: "Driving Licence scan was blurry or unreadable. Please re-upload a high-resolution front and back photo.",
+                            text = application.adminFeedback,
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = Color(0xFF991B1B),
                                 lineHeight = 18.sp
@@ -263,9 +309,9 @@ fun DriverVerificationStatusScreen(
                         )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(16.dp))
             }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Application Summary Card
             RideMitraCard(
@@ -284,17 +330,20 @@ fun DriverVerificationStatusScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     DetailLineRow("Application ID", application.applicationId)
-                    DetailLineRow("Driver Name", application.personalInfo.fullName.ifBlank { "Rajesh Kumar" })
-                    DetailLineRow("Registered Vehicle", "${application.vehicleDetails.manufacturer} ${application.vehicleDetails.model}".trim().ifBlank { "Maruti Dzire" })
-                    DetailLineRow("Vehicle Plate", application.vehicleDetails.registrationNumber.ifBlank { "DL 01 AB 9482" })
-                    DetailLineRow("Seating Rule", "Max ${application.vehicleDetails.allowedRideMitraCapacity} Riders (N-1 Enforced)")
+                    DetailLineRow("Driver Name", application.personalInfo.fullName.ifBlank { "Not Submitted" })
+                    DetailLineRow("Vehicle Plate", application.vehicleDetails.registrationNumber.ifBlank { "Not Submitted" })
+                    DetailLineRow(
+                        label = "Passenger Capacity",
+                        value = "${application.vehicleDetails.passengerCapacityExclDriver} Seats (Max ${application.vehicleDetails.allowedRideMitraCapacity} Riders - N-1 Rule)"
+                    )
+                    DetailLineRow("Booking Eligibility", if (application.isEligibleForBookings) "ELIGIBLE" else "BLOCKED", isHighlight = application.isEligibleForBookings)
                     DetailLineRow("Submitted On", if (application.submissionDate.isNotBlank()) application.submissionDate else "Pending Submission")
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Background Verification Policy Assurance
+            // Verification Policy Notice (No false authority/encryption claims)
             RideMitraCard(
                 modifier = Modifier.fillMaxWidth(),
                 backgroundColor = Color(0xFFF8FAFC),
@@ -311,7 +360,7 @@ fun DriverVerificationStatusScreen(
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
                         Text(
-                            text = "Authentic Airport Compliance",
+                            text = "RideMitra Safety & Document Verification",
                             style = MaterialTheme.typography.titleSmall.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = PrimaryNavy
@@ -319,7 +368,7 @@ fun DriverVerificationStatusScreen(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = "Uploading documents does not mean instant automated approval. Every vehicle and licence is audited by airport ground operators to guarantee passenger safety.",
+                            text = "Uploading documents does not mean automatic approval. Every vehicle and licence is audited by the RideMitra compliance team to guarantee passenger safety and regulatory adherence.",
                             style = MaterialTheme.typography.bodySmall.copy(
                                 color = TextSecondary,
                                 fontSize = 11.sp,
@@ -332,8 +381,8 @@ fun DriverVerificationStatusScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Primary contextual actions based on status
-            when (status) {
+            // Primary Actions based on status
+            when (effectiveStatus) {
                 DriverVerificationStatus.NOT_SUBMITTED -> {
                     RideMitraButton(
                         text = "Complete Driver Registration",
@@ -343,16 +392,43 @@ fun DriverVerificationStatusScreen(
                     )
                 }
 
-                DriverVerificationStatus.APPROVED -> {
+                DriverVerificationStatus.UPLOADED -> {
                     RideMitraButton(
-                        text = "Enter Driver Dashboard",
-                        onClick = onEnterDashboardIfApproved,
-                        gradient = HeroTealGradient,
+                        text = "Review & Submit Application",
+                        onClick = onStartOrResumeRegistration,
+                        gradient = PrimaryGradient,
                         trailingIcon = Icons.AutoMirrored.Filled.ArrowForward
                     )
                 }
 
-                DriverVerificationStatus.REJECTED, DriverVerificationStatus.EXPIRED -> {
+                DriverVerificationStatus.APPROVED -> {
+                    if (application.isEligibleForBookings) {
+                        RideMitraButton(
+                            text = "Enter Driver Dashboard",
+                            onClick = onEnterDashboardIfApproved,
+                            gradient = HeroTealGradient,
+                            trailingIcon = Icons.AutoMirrored.Filled.ArrowForward
+                        )
+                    } else {
+                        RideMitraButton(
+                            text = "Renew Expired Documents",
+                            onClick = { onReUploadDocuments(application.reUploadRequiredStep ?: 5) },
+                            gradient = PrimaryGradient,
+                            trailingIcon = Icons.Default.Refresh
+                        )
+                    }
+                }
+
+                DriverVerificationStatus.EXPIRED -> {
+                    RideMitraButton(
+                        text = "Update Expired Documents",
+                        onClick = { onReUploadDocuments(application.reUploadRequiredStep ?: 5) },
+                        gradient = PrimaryGradient,
+                        trailingIcon = Icons.Default.Refresh
+                    )
+                }
+
+                DriverVerificationStatus.REJECTED -> {
                     RideMitraButton(
                         text = "Re-Upload Required Documents",
                         onClick = { onReUploadDocuments(application.reUploadRequiredStep ?: 3) },
@@ -373,7 +449,7 @@ fun DriverVerificationStatusScreen(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Contact Support action
+            // Contact Support
             RideMitraOutlinedButton(
                 text = "Contact Driver Help Desk",
                 onClick = {
@@ -400,7 +476,11 @@ private data class Quintuple<A, B, C, D, E>(
 )
 
 @Composable
-private fun DetailLineRow(label: String, value: String) {
+private fun DetailLineRow(
+    label: String,
+    value: String,
+    isHighlight: Boolean = false
+) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -418,8 +498,8 @@ private fun DetailLineRow(label: String, value: String) {
         Text(
             text = value,
             style = MaterialTheme.typography.bodySmall.copy(
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary,
+                fontWeight = if (isHighlight) FontWeight.Bold else FontWeight.SemiBold,
+                color = if (isHighlight) SuccessGreen else TextPrimary,
                 fontSize = 11.sp
             )
         )

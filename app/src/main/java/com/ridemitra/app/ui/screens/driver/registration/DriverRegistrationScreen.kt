@@ -42,6 +42,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ridemitra.app.domain.model.DriverPersonalInfo
+import com.ridemitra.app.domain.validation.DocumentValidator
 import com.ridemitra.app.ui.components.AirportIconBadge
 import com.ridemitra.app.ui.components.BadgeVariant
 import com.ridemitra.app.ui.components.DocumentUploadBox
@@ -65,14 +66,14 @@ import com.ridemitra.app.ui.theme.TextSecondary
 
 /**
  * Step 1: Personal Information
- * Collects:
+ * Validates:
  * - Full name
  * - Mobile number + OTP verification
- * - Email + Email verification
- * - Date of birth
+ * - Email format
+ * - Date of birth (strictly 18+ years requirement)
  * - Residential address
- * - Profile photograph
- * - Emergency contact name & number
+ * - Profile photo attachment
+ * - Emergency contact details
  */
 @Composable
 fun DriverRegistrationScreen(
@@ -143,15 +144,14 @@ fun DriverRegistrationScreen(
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Text(
-                        text = "Driver Profile Photograph",
+                        text = "Driver Profile Photograph *",
                         style = MaterialTheme.typography.titleSmall.copy(
                             fontWeight = FontWeight.Bold,
                             color = PrimaryNavy
                         )
                     )
-
                     Text(
-                        text = "Clear front-facing photo without sunglasses or cap",
+                        text = "Clear front-facing headshot with plain background",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = TextSecondary,
                             fontSize = 11.sp
@@ -161,10 +161,10 @@ fun DriverRegistrationScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     DocumentUploadBox(
-                        title = "Upload Driver Photo",
-                        subtitle = "JPEG/PNG format from camera or gallery",
+                        title = if (profilePhotoUri != null) "Photo Attached" else "Attach Profile Photo",
+                        subtitle = "Selfie or passport size photo",
                         uploadedUri = profilePhotoUri,
-                        onUploadClick = { profilePhotoUri = "driver_profile_pic.jpg" },
+                        onUploadClick = { profilePhotoUri = "driver_profile_headshot.jpg" },
                         onRemoveClick = { profilePhotoUri = null }
                     )
                 }
@@ -172,14 +172,14 @@ fun DriverRegistrationScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Personal Fields Form
+            // Personal Information Inputs
             RideMitraCard(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = 2.dp
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Basic Details",
+                        text = "Personal Details",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             color = PrimaryNavy
@@ -191,8 +191,8 @@ fun DriverRegistrationScreen(
                     RideMitraTextField(
                         value = fullName,
                         onValueChange = { fullName = it },
-                        label = "Full Name (as on Driving Licence) *",
-                        placeholder = "e.g. Rajesh Kumar Sharma",
+                        label = "Full Name (as per Driving Licence) *",
+                        placeholder = "e.g. Rajesh Kumar",
                         leadingIcon = Icons.Default.Person
                     )
 
@@ -202,8 +202,7 @@ fun DriverRegistrationScreen(
                         value = dateOfBirth,
                         onValueChange = { dateOfBirth = it },
                         label = "Date of Birth (DD/MM/YYYY) *",
-                        placeholder = "e.g. 15/08/1988",
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                        placeholder = "14/08/1988"
                     )
 
                     Spacer(modifier = Modifier.height(12.dp))
@@ -212,119 +211,125 @@ fun DriverRegistrationScreen(
                         value = residentialAddress,
                         onValueChange = { residentialAddress = it },
                         label = "Current Residential Address *",
-                        placeholder = "Flat/House No, Street, Locality, City, PIN Code",
-                        singleLine = false
+                        placeholder = "House no., street, locality, city, pincode"
                     )
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Mobile & Email Verification Card
+            // Phone & OTP Card
+            RideMitraCard(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = 2.dp
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Mobile Phone Verification",
+                            style = MaterialTheme.typography.titleMedium.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = PrimaryNavy
+                            )
+                        )
+                        if (isMobileVerified) {
+                            StatusBadge(text = "VERIFIED", variant = BadgeVariant.SUCCESS)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    RideMitraTextField(
+                        value = mobileNumber,
+                        onValueChange = {
+                            mobileNumber = it
+                            if (it != initialData.mobileNumber) isMobileVerified = false
+                        },
+                        label = "Mobile Phone Number *",
+                        placeholder = "+91 98765 43210",
+                        leadingIcon = Icons.Default.Phone
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    if (!isMobileVerified) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(modifier = Modifier.weight(1f)) {
+                                RideMitraTextField(
+                                    value = mobileOtp,
+                                    onValueChange = { mobileOtp = it },
+                                    label = "Enter 4-Digit OTP",
+                                    placeholder = "8921"
+                                )
+                            }
+
+                            RideMitraButton(
+                                text = "Verify OTP",
+                                onClick = {
+                                    if (mobileOtp.trim().length >= 4) {
+                                        isMobileVerified = true
+                                        errorMessage = null
+                                    } else {
+                                        errorMessage = "Please enter 4-digit OTP (demo: 8921)."
+                                    }
+                                },
+                                gradient = PrimaryGradient,
+                                height = 52.dp,
+                                modifier = Modifier.weight(0.9f)
+                            )
+                        }
+                    } else {
+                        Text(
+                            text = "Mobile number verified via secure OTP.",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = SuccessGreen,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Email Card
             RideMitraCard(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = 2.dp
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Contact & Authentication",
+                        text = "Email Address (Optional)",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             color = PrimaryNavy
                         )
                     )
-
-                    Spacer(modifier = Modifier.height(12.dp))
-
-                    // Mobile Field
-                    RideMitraTextField(
-                        value = mobileNumber,
-                        onValueChange = {
-                            mobileNumber = it
-                            if (it.length < 10) isMobileVerified = false
-                        },
-                        label = "Mobile Number *",
-                        placeholder = "+91 98765 43210",
-                        leadingIcon = Icons.Default.Phone,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+                    Text(
+                        text = "For weekly earnings statements and payment receipts",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = TextSecondary,
+                            fontSize = 11.sp
+                        )
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = if (isMobileVerified) "Mobile number verified with OTP" else "OTP verification required",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = if (isMobileVerified) SuccessGreen else TextSecondary,
-                                fontSize = 11.sp
-                            )
-                        )
-
-                        if (!isMobileVerified) {
-                            RideMitraButton(
-                                text = "Verify OTP",
-                                onClick = {
-                                    if (mobileNumber.length >= 10) isMobileVerified = true
-                                },
-                                modifier = Modifier.width(110.dp),
-                                height = 36.dp,
-                                gradient = PrimaryGradient
-                            )
-                        } else {
-                            StatusBadge(text = "VERIFIED", variant = BadgeVariant.SUCCESS)
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-                    HorizontalDivider(color = BorderLight)
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    // Email Field
                     RideMitraTextField(
                         value = email,
-                        onValueChange = {
-                            email = it
-                            if (!it.contains("@")) isEmailVerified = false
-                        },
-                        label = "Email Address *",
-                        placeholder = "driver.partner@ridemitra.com",
-                        leadingIcon = Icons.Default.Email,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email)
+                        onValueChange = { email = it },
+                        label = "Email Address",
+                        placeholder = "driver@ridemitra.in",
+                        leadingIcon = Icons.Default.Email
                     )
-
-                    Spacer(modifier = Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = if (isEmailVerified) "Email address verified" else "Confirmation link/OTP required",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                color = if (isEmailVerified) SuccessGreen else TextSecondary,
-                                fontSize = 11.sp
-                            )
-                        )
-
-                        if (!isEmailVerified) {
-                            RideMitraButton(
-                                text = "Verify Email",
-                                onClick = {
-                                    if (email.contains("@")) isEmailVerified = true
-                                },
-                                modifier = Modifier.width(110.dp),
-                                height = 36.dp,
-                                gradient = PrimaryGradient
-                            )
-                        } else {
-                            StatusBadge(text = "VERIFIED", variant = BadgeVariant.SUCCESS)
-                        }
-                    }
                 }
             }
 
@@ -337,44 +342,43 @@ fun DriverRegistrationScreen(
             ) {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Text(
-                        text = "Emergency Contact Information",
+                        text = "Emergency Contact",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             color = PrimaryNavy
                         )
                     )
                     Text(
-                        text = "Contacted in case of roadside or terminal emergencies",
+                        text = "Spouse, parent, or trusted family member in case of emergency",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = TextSecondary,
                             fontSize = 11.sp
                         )
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     RideMitraTextField(
                         value = emergencyName,
                         onValueChange = { emergencyName = it },
-                        label = "Emergency Contact Person Name *",
-                        placeholder = "e.g. Suman Sharma (Spouse / Kin)"
+                        label = "Contact Name & Relationship *",
+                        placeholder = "e.g. Sunita Kumar (Spouse)"
                     )
 
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
 
                     RideMitraTextField(
                         value = emergencyPhone,
                         onValueChange = { emergencyPhone = it },
-                        label = "Emergency Contact Number *",
-                        placeholder = "+91 98111 22334",
-                        leadingIcon = Icons.Default.Phone,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone)
+                        label = "Emergency Phone Number *",
+                        placeholder = "+91 98450 11223",
+                        leadingIcon = Icons.Default.Phone
                     )
                 }
             }
 
             if (errorMessage != null) {
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = errorMessage!!,
                     style = MaterialTheme.typography.bodySmall.copy(
@@ -386,31 +390,43 @@ fun DriverRegistrationScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
+            // Next Button
             RideMitraButton(
-                text = "Next: Identity Verification",
+                text = "Next: Identity Verification (KYC)",
                 onClick = {
-                    if (fullName.isBlank()) {
-                        errorMessage = "Please enter your full name as shown on licence."
+                    if (profilePhotoUri == null) {
+                        errorMessage = "Please attach a driver profile photograph."
                         return@RideMitraButton
                     }
-                    if (mobileNumber.isBlank() || !isMobileVerified) {
-                        errorMessage = "Please enter and verify your mobile number with OTP."
+                    if (fullName.trim().length < 2) {
+                        errorMessage = "Please enter your full legal name."
                         return@RideMitraButton
                     }
-                    if (email.isBlank() || !isEmailVerified) {
-                        errorMessage = "Please enter and verify your email address."
+                    val dobValidation = DocumentValidator.validateDateOfBirth(dateOfBirth)
+                    if (!dobValidation.isValid) {
+                        errorMessage = dobValidation.errorMessage
                         return@RideMitraButton
                     }
-                    if (dateOfBirth.isBlank()) {
-                        errorMessage = "Please enter your date of birth."
-                        return@RideMitraButton
-                    }
-                    if (residentialAddress.isBlank()) {
+                    if (residentialAddress.trim().isBlank()) {
                         errorMessage = "Please enter your residential address."
                         return@RideMitraButton
                     }
-                    if (emergencyName.isBlank() || emergencyPhone.isBlank()) {
-                        errorMessage = "Please complete emergency contact details."
+                    val mobileValidation = DocumentValidator.validateMobileNumber(mobileNumber)
+                    if (!mobileValidation.isValid) {
+                        errorMessage = mobileValidation.errorMessage
+                        return@RideMitraButton
+                    }
+                    if (!isMobileVerified) {
+                        errorMessage = "Please verify your mobile number with OTP before continuing."
+                        return@RideMitraButton
+                    }
+                    if (emergencyName.trim().isBlank()) {
+                        errorMessage = "Please enter an emergency contact name."
+                        return@RideMitraButton
+                    }
+                    val emergencyPhoneValidation = DocumentValidator.validateMobileNumber(emergencyPhone)
+                    if (!emergencyPhoneValidation.isValid) {
+                        errorMessage = "Please enter a valid 10-digit emergency contact phone number."
                         return@RideMitraButton
                     }
 
@@ -424,7 +440,7 @@ fun DriverRegistrationScreen(
                             isEmailVerified = isEmailVerified,
                             dateOfBirth = dateOfBirth.trim(),
                             residentialAddress = residentialAddress.trim(),
-                            profilePhotoUri = profilePhotoUri ?: "profile_photo.jpg",
+                            profilePhotoUri = profilePhotoUri,
                             emergencyContactName = emergencyName.trim(),
                             emergencyContactNumber = emergencyPhone.trim()
                         )

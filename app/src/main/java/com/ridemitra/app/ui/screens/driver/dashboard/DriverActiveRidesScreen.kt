@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -171,14 +172,18 @@ fun DriverActiveRidesScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text(
-                                text = "CURRENT TRIP STATUS",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = TealAccent,
-                                    fontWeight = FontWeight.Bold,
-                                    letterSpacing = 0.5.sp
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "CURRENT TRIP STATUS",
+                                    style = MaterialTheme.typography.labelSmall.copy(
+                                        color = TealAccent,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 0.5.sp
+                                    )
                                 )
-                            )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                StatusBadge(text = "DEMO DATA", variant = BadgeVariant.NEUTRAL)
+                            }
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = activeRide.status.label,

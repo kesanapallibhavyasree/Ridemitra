@@ -23,13 +23,13 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.HorizontalDivider
@@ -79,16 +79,14 @@ import com.ridemitra.app.ui.theme.TextSecondary
 import com.ridemitra.app.ui.theme.WarningAmber
 
 /**
- * Screen 5: Driver Dashboard (Home Tab)
- * Premium driver dashboard containing:
- * - Greeting and driver profile
- * - Online/offline availability toggle
- * - Verification status indicator
- * - Today's completed rides & verified earnings
- * - Total completed rides & driver ratings
- * - Upcoming airport bookings / clean empty state
- * - Quick actions & notifications
- * Note: Never displays random earnings or fake bookings.
+ * Driver Dashboard (Home Tab)
+ * Clearly labels all simulated / placeholder dashboard figures as DEMO DATA:
+ * - Earnings [DEMO DATA]
+ * - Completed rides [DEMO DATA]
+ * - Booking payouts [DEMO DATA]
+ * - GPS simulated status [DEMO DATA]
+ * - Driver ratings [DEMO DATA]
+ * Strictly checks driver approval and document validity before allowing ride dispatches.
  */
 @Composable
 fun DriverHomeScreen(
@@ -105,9 +103,10 @@ fun DriverHomeScreen(
     modifier: Modifier = Modifier
 ) {
     val scrollState = rememberScrollState()
+    val isEligible = application.isEligibleForBookings
 
     val statusColor by animateColorAsState(
-        targetValue = if (isOnline) SuccessGreen else TextMuted,
+        targetValue = if (isOnline && isEligible) SuccessGreen else TextMuted,
         label = "statusColor"
     )
 
@@ -151,12 +150,14 @@ fun DriverHomeScreen(
                             )
                         )
                         Spacer(modifier = Modifier.width(4.dp))
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Verified Driver",
-                            tint = TealAccent,
-                            modifier = Modifier.size(16.dp)
-                        )
+                        if (isEligible) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Approved",
+                                tint = TealAccent,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
                     }
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -168,9 +169,9 @@ fun DriverHomeScreen(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (isOnline) "ONLINE • Ready at Airport Hub" else "OFFLINE",
+                            text = if (isOnline && isEligible) "ONLINE • Ready for Airport Dispatches" else if (!isEligible) "DISPATCH BLOCKED" else "OFFLINE",
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = statusColor,
+                                color = if (!isEligible) ErrorRed else statusColor,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 11.sp
                             )
@@ -206,13 +207,55 @@ fun DriverHomeScreen(
             }
         }
 
+        // Eligibility Banner if not approved or documents expired
+        if (!isEligible) {
+            Spacer(modifier = Modifier.height(14.dp))
+            RideMitraCard(
+                modifier = Modifier.fillMaxWidth(),
+                backgroundColor = Color(0xFFFEF2F2),
+                borderColor = Color(0xFFFECDD3),
+                elevation = 2.dp,
+                onClick = onCheckVerificationStatus
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = ErrorRed,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (application.hasExpiredDocuments) "Booking Blocked: Document(s) Expired" else "Account ${application.status.label}",
+                            style = MaterialTheme.typography.titleSmall.copy(
+                                fontWeight = FontWeight.Bold,
+                                color = ErrorRed
+                            )
+                        )
+                        Text(
+                            text = if (application.hasExpiredDocuments)
+                                "Renew expired documents to restore airport dispatch eligibility."
+                            else
+                                "Awaiting compliance approval before receiving dispatch requests.",
+                            style = MaterialTheme.typography.bodySmall.copy(
+                                color = Color(0xFF991B1B),
+                                fontSize = 11.sp
+                            )
+                        )
+                    }
+                    StatusBadge(text = "CHECK", variant = BadgeVariant.WARNING)
+                }
+            }
+        }
+
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 2. Online / Offline Availability Switch Card
+        // 2. Online / Offline Availability Switch Card (With GPS simulated notice)
         RideMitraCard(
             modifier = Modifier.fillMaxWidth(),
-            backgroundColor = if (isOnline) Color(0xFFF0FDF4) else Color(0xFFF8FAFC),
-            borderColor = if (isOnline) Color(0xFF86EFAC) else BorderLight,
+            backgroundColor = if (isOnline && isEligible) Color(0xFFF0FDF4) else Color(0xFFF8FAFC),
+            borderColor = if (isOnline && isEligible) Color(0xFF86EFAC) else BorderLight,
             elevation = 2.dp
         ) {
             Row(
@@ -222,24 +265,33 @@ fun DriverHomeScreen(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = if (isOnline) "Receiving Airport Dispatches" else "You are Currently Offline",
+                        text = if (isOnline && isEligible) "Receiving Airport Dispatches" else if (!isEligible) "Dispatch Disabled (Ineligible)" else "You are Currently Offline",
                         style = MaterialTheme.typography.titleSmall.copy(
                             fontWeight = FontWeight.Bold,
-                            color = if (isOnline) Color(0xFF166534) else TextSecondary
+                            color = if (isOnline && isEligible) Color(0xFF166534) else TextSecondary
                         )
                     )
                     Text(
-                        text = if (isOnline) "GPS active at airport terminal cab hub" else "Toggle switch to accept incoming bookings",
+                        text = if (isOnline && isEligible)
+                            "GPS Availability: Simulated Location [DEMO DATA]"
+                        else
+                            "Toggle switch to activate dispatch simulation",
                         style = MaterialTheme.typography.bodySmall.copy(
-                            color = if (isOnline) Color(0xFF15803D) else TextMuted,
+                            color = if (isOnline && isEligible) Color(0xFF15803D) else TextMuted,
                             fontSize = 11.sp
                         )
                     )
                 }
 
                 Switch(
-                    checked = isOnline,
-                    onCheckedChange = onToggleOnline,
+                    checked = isOnline && isEligible,
+                    onCheckedChange = { checked ->
+                        if (isEligible) {
+                            onToggleOnline(checked)
+                        } else {
+                            onCheckVerificationStatus()
+                        }
+                    },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = CardBackground,
                         checkedTrackColor = TealAccent,
@@ -275,16 +327,16 @@ fun DriverHomeScreen(
                     Spacer(modifier = Modifier.width(8.dp))
                     Column {
                         Text(
-                            text = "Commercial Driver Badge Status",
+                            text = "Driver Compliance Status",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = PrimaryNavy
                             )
                         )
                         Text(
-                            text = application.status.label,
+                            text = if (application.hasExpiredDocuments) "Documents Expired" else application.status.label,
                             style = MaterialTheme.typography.bodySmall.copy(
-                                color = RoyalBlue,
+                                color = if (application.hasExpiredDocuments) ErrorRed else RoyalBlue,
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 11.sp
                             )
@@ -298,12 +350,12 @@ fun DriverHomeScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 4. Metrics Summary Row (Confirmed Earnings & Strict N-1 Capacity)
+        // 4. Metrics Summary Row (Labeled as DEMO DATA)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Today's Confirmed Net Earnings Card
+            // Net Earnings Card (Labeled DEMO DATA)
             RideMitraCard(
                 modifier = Modifier.weight(1f),
                 backgroundColor = PrimaryNavy,
@@ -312,14 +364,21 @@ fun DriverHomeScreen(
                 onClick = onViewEarnings
             ) {
                 Column {
-                    Text(
-                        text = "TODAY'S EARNINGS",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            color = TealAccent,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "TODAY'S EARNINGS",
+                            style = MaterialTheme.typography.labelSmall.copy(
+                                color = TealAccent,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp
+                            )
                         )
-                    )
+                        StatusBadge(text = "DEMO DATA", variant = BadgeVariant.NEUTRAL)
+                    }
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
                         text = if (earningsSummary.todayNetEarnings > 0) "₹${earningsSummary.todayNetEarnings.toInt()}" else "₹0",
@@ -330,7 +389,7 @@ fun DriverHomeScreen(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "${earningsSummary.todayCompletedTrips} Trips • 100% Payout",
+                        text = "${earningsSummary.todayCompletedTrips} Completed Trips • Net Payout",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = Color(0xFF94A3B8),
                             fontSize = 11.sp
@@ -339,7 +398,7 @@ fun DriverHomeScreen(
                 }
             }
 
-            // Registered Vehicle & N-1 Seat Rule Card
+            // Registered Vehicle & Strict N-1 Capacity Card
             RideMitraCard(
                 modifier = Modifier.weight(1f),
                 borderColor = RoyalBlue.copy(alpha = 0.3f),
@@ -365,7 +424,7 @@ fun DriverHomeScreen(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "${application.vehicleDetails.passengerCapacityExclDriver}-Seater (Max ${application.vehicleDetails.allowedRideMitraCapacity} Riders)",
+                        text = "${application.vehicleDetails.passengerCapacityExclDriver}-Seater (Max ${application.vehicleDetails.allowedRideMitraCapacity} Riders - N-1 Rule)",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = SuccessGreen,
                             fontWeight = FontWeight.SemiBold,
@@ -373,6 +432,40 @@ fun DriverHomeScreen(
                         )
                     )
                 }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Driver Rating Card (Labeled DEMO DATA)
+        RideMitraCard(
+            modifier = Modifier.fillMaxWidth(),
+            backgroundColor = Color(0xFFF8FAFC),
+            borderColor = BorderLight,
+            elevation = 1.dp
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = "Rating",
+                        tint = WarningAmber,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "Driver Rating: ★ ${earningsSummary.driverRating}",
+                        style = MaterialTheme.typography.bodyMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                    )
+                }
+                StatusBadge(text = "DEMO DATA", variant = BadgeVariant.NEUTRAL)
             }
         }
 
@@ -407,7 +500,6 @@ fun DriverHomeScreen(
         Spacer(modifier = Modifier.height(10.dp))
 
         if (incomingRequests.isEmpty()) {
-            // Clean empty state (No fake data!)
             RideMitraCard(
                 modifier = Modifier.fillMaxWidth(),
                 backgroundColor = Color(0xFFF8FAFC),
@@ -428,14 +520,14 @@ fun DriverHomeScreen(
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = if (isOnline) "No ride requests available right now." else "You are offline.",
+                        text = if (isOnline && isEligible) "No ride requests available right now." else "You are currently offline.",
                         style = MaterialTheme.typography.bodyMedium.copy(
                             fontWeight = FontWeight.SemiBold,
                             color = TextSecondary
                         )
                     )
                     Text(
-                        text = if (isOnline) "New airport dispatch requests will appear here when passengers book." else "Switch online above to start receiving dispatch requests.",
+                        text = if (isOnline && isEligible) "New airport dispatch requests will appear here when passengers book." else "Switch online above to start receiving dispatch requests.",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = TextMuted,
                             fontSize = 11.sp
@@ -445,7 +537,6 @@ fun DriverHomeScreen(
                 }
             }
         } else {
-            // Display first active request card
             val req = incomingRequests.first()
             RideMitraCard(
                 modifier = Modifier.fillMaxWidth(),
@@ -459,11 +550,11 @@ fun DriverHomeScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         StatusBadge(
-                            text = "AIRPORT DISPATCH",
+                            text = "AIRPORT DISPATCH [DEMO DATA]",
                             variant = BadgeVariant.TEAL
                         )
                         Text(
-                            text = "₹${req.estimatedDriverPayout.toInt()} Payout",
+                            text = "₹${req.estimatedDriverPayout.toInt()} Payout [DEMO]",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.ExtraBold,
                                 color = PrimaryNavy
@@ -491,50 +582,12 @@ fun DriverHomeScreen(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     RideMitraButton(
-                        text = "Review & Accept Request",
+                        text = if (isEligible) "Review & Accept Request" else "Account Ineligible to Accept",
                         onClick = onViewRequests,
-                        gradient = HeroTealGradient,
+                        gradient = if (isEligible) HeroTealGradient else PrimaryGradient,
                         height = 42.dp
                     )
                 }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // 6. Platform Income Protection Assurance
-        RideMitraCard(
-            modifier = Modifier.fillMaxWidth(),
-            backgroundColor = Color(0xFFEFF6FF),
-            borderColor = Color(0xFFBFDBFE),
-            elevation = 1.dp
-        ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Shield,
-                        contentDescription = null,
-                        tint = RoyalBlue,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = "Driver Income Protection Guarantee",
-                        style = MaterialTheme.typography.titleSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = RoyalBlue
-                        )
-                    )
-                }
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "When passengers receive promotional discounts (such as the 10% solo promo), RideMitra fully absorbs the cost. Your agreed driver payout is 100% protected and never reduced.",
-                    style = MaterialTheme.typography.bodySmall.copy(
-                        color = Color(0xFF1E40AF),
-                        lineHeight = 17.sp,
-                        fontSize = 11.sp
-                    )
-                )
             }
         }
 

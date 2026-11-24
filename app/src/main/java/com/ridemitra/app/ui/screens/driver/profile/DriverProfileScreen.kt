@@ -40,7 +40,7 @@ import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -172,7 +172,7 @@ fun DriverProfileScreen(
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "4.88 (312 rides)",
+                                text = "4.88 (312 rides) [DEMO DATA]",
                                 style = MaterialTheme.typography.bodySmall.copy(
                                     color = Color.White.copy(alpha = 0.9f),
                                     fontWeight = FontWeight.SemiBold
@@ -183,7 +183,7 @@ fun DriverProfileScreen(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
-                Divider(color = Color.White.copy(alpha = 0.15f))
+                HorizontalDivider(color = Color.White.copy(alpha = 0.15f))
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Row(
@@ -270,7 +270,7 @@ fun DriverProfileScreen(
                 }
 
                 Spacer(modifier = Modifier.height(12.dp))
-                Divider(color = DividerLight)
+                HorizontalDivider(color = DividerLight)
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Strict N-1 Seat Rule Enforcement Banner
@@ -330,16 +330,16 @@ fun DriverProfileScreen(
                     onReplace = { onEditSection(3) }
                 )
 
-                Divider(color = DividerLight, modifier = Modifier.padding(vertical = 10.dp))
+                HorizontalDivider(color = DividerLight, modifier = Modifier.padding(vertical = 10.dp))
 
                 DocumentItemRow(
                     title = "Identity Document (Aadhaar / PAN)",
-                    subtitle = "Government ID Masked & Securely Stored",
+                    subtitle = "Government ID Masked & Securely Handled",
                     isVerified = true,
                     onReplace = { onEditSection(2) }
                 )
 
-                Divider(color = DividerLight, modifier = Modifier.padding(vertical = 10.dp))
+                HorizontalDivider(color = DividerLight, modifier = Modifier.padding(vertical = 10.dp))
 
                 DocumentItemRow(
                     title = "Vehicle RC & Commercial Insurance",
@@ -471,7 +471,7 @@ fun DriverProfileScreen(
                             "3. N-1 Capacity Compliance: To ensure luggage safety and comfort, drivers must strictly respect the N-1 passenger ceiling.\n\n" +
                             "4. Advance & Cancellation: Advance payments are settled directly. Cancellations within one hour are non-refundable to the passenger."
                         } else {
-                            "1. Document Security: Identity documents like Aadhaar and PAN cards are strictly encrypted and masked. Government identity numbers are never displayed in full to third parties.\n\n" +
+                            "1. Document Privacy: Identity documents like Aadhaar and PAN cards are masked. Government identity numbers are never displayed in full to third parties.\n\n" +
                             "2. Location Privacy: High-accuracy location telemetry is only activated when you are set to 'ONLINE' and while an active airport trip is underway."
                         },
                         style = MaterialTheme.typography.bodySmall,

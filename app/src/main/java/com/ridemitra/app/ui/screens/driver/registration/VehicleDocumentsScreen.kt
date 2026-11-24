@@ -14,6 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -30,6 +31,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.ridemitra.app.domain.model.VehicleRegulatoryDocs
+import com.ridemitra.app.domain.validation.DocumentValidator
 import com.ridemitra.app.ui.components.DocumentUploadBox
 import com.ridemitra.app.ui.components.RideMitraButton
 import com.ridemitra.app.ui.components.RideMitraCard
@@ -37,6 +39,7 @@ import com.ridemitra.app.ui.components.RideMitraHeader
 import com.ridemitra.app.ui.components.RideMitraTextField
 import com.ridemitra.app.ui.theme.BackgroundLight
 import com.ridemitra.app.ui.theme.BorderLight
+import com.ridemitra.app.ui.theme.ErrorRed
 import com.ridemitra.app.ui.theme.PrimaryGradient
 import com.ridemitra.app.ui.theme.PrimaryNavy
 import com.ridemitra.app.ui.theme.TextPrimary
@@ -45,12 +48,12 @@ import com.ridemitra.app.ui.theme.WarningAmber
 
 /**
  * Step 5: Vehicle Regulatory Document Submission
- * Provides upload interfaces for:
- * - Registration Certificate (RC)
- * - Motor Insurance Policy
- * - PUC Certificate
- * - Fitness Certificate (where applicable)
- * - Commercial Permit or Authorization (where applicable)
+ * Features strict expiration date checking for:
+ * - RC Book
+ * - Commercial Motor Insurance
+ * - PUC (Pollution Under Control)
+ * - Commercial Cab Permit & Authorization
+ * - Fitness Certificate
  */
 @Composable
 fun VehicleDocumentsScreen(
@@ -73,9 +76,31 @@ fun VehicleDocumentsScreen(
     var fitnessDocUri by remember { mutableStateOf(initialData.fitnessDocUri) }
 
     var commercialPermitUri by remember { mutableStateOf(initialData.commercialPermitUri) }
+    var commercialPermitExpiry by remember { mutableStateOf(initialData.commercialPermitExpiryDate) }
 
     var errorMessage by remember { mutableStateOf<String?>(null) }
     val scrollState = rememberScrollState()
+
+    // Real-time expiry feedback
+    val insuranceCheck = remember(insuranceExpiry) {
+        if (insuranceExpiry.isNotBlank()) DocumentValidator.validateExpiry(insuranceExpiry, "Motor Insurance")
+        else null
+    }
+
+    val pucCheck = remember(pucExpiry) {
+        if (pucExpiry.isNotBlank()) DocumentValidator.validateExpiry(pucExpiry, "PUC Certificate")
+        else null
+    }
+
+    val fitnessCheck = remember(fitnessExpiry) {
+        if (fitnessExpiry.isNotBlank()) DocumentValidator.validateExpiry(fitnessExpiry, "Fitness Certificate", isRequired = false)
+        else null
+    }
+
+    val permitCheck = remember(commercialPermitExpiry) {
+        if (commercialPermitExpiry.isNotBlank()) DocumentValidator.validateExpiry(commercialPermitExpiry, "Commercial Permit", isRequired = false)
+        else null
+    }
 
     Column(
         modifier = modifier
@@ -109,7 +134,7 @@ fun VehicleDocumentsScreen(
                         modifier = Modifier.padding(end = 10.dp)
                     )
                     Text(
-                        text = "Commercial airport operations mandate active Motor Third-Party / Comprehensive Insurance and valid RTO Pollution (PUC) clearance.",
+                        text = "Commercial airport operations mandate active Motor Insurance and valid RTO Pollution (PUC) clearance. Expired certificates will prevent ride eligibility.",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = Color(0xFF92400E),
                             fontSize = 11.sp,
@@ -191,8 +216,20 @@ fun VehicleDocumentsScreen(
                             RideMitraTextField(
                                 value = insuranceExpiry,
                                 onValueChange = { insuranceExpiry = it },
-                                label = "Valid Till *",
+                                label = "Valid Till (DD/MM/YYYY) *",
                                 placeholder = "DD/MM/YYYY"
+                            )
+                        }
+                    }
+
+                    if (insuranceCheck != null && insuranceCheck.isExpired) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Error, contentDescription = null, tint = ErrorRed)
+                            Spacer(modifier = Modifier.padding(end = 4.dp))
+                            Text(
+                                text = insuranceCheck.errorMessage ?: "Insurance is expired.",
+                                style = MaterialTheme.typography.bodySmall.copy(color = ErrorRed, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                             )
                         }
                     }
@@ -201,7 +238,7 @@ fun VehicleDocumentsScreen(
 
                     DocumentUploadBox(
                         title = "Upload Insurance Policy Document",
-                        subtitle = "Active commercial passenger carrying insurance",
+                        subtitle = "Active commercial passenger carrying insurance policy",
                         uploadedUri = insuranceDocUri,
                         onUploadClick = { insuranceDocUri = "motor_insurance_policy.pdf" },
                         onRemoveClick = { insuranceDocUri = null }
@@ -230,9 +267,21 @@ fun VehicleDocumentsScreen(
                     RideMitraTextField(
                         value = pucExpiry,
                         onValueChange = { pucExpiry = it },
-                        label = "PUC Expiry Date *",
+                        label = "PUC Expiry Date (DD/MM/YYYY) *",
                         placeholder = "DD/MM/YYYY"
                     )
+
+                    if (pucCheck != null && pucCheck.isExpired) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Error, contentDescription = null, tint = ErrorRed)
+                            Spacer(modifier = Modifier.padding(end = 4.dp))
+                            Text(
+                                text = pucCheck.errorMessage ?: "PUC is expired.",
+                                style = MaterialTheme.typography.bodySmall.copy(color = ErrorRed, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            )
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(10.dp))
 
@@ -248,7 +297,7 @@ fun VehicleDocumentsScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // 4. Commercial Permit & Fitness (Optional or State-specific)
+            // 4. Commercial Taxi Permit / Authorization
             RideMitraCard(
                 modifier = Modifier.fillMaxWidth(),
                 elevation = 2.dp
@@ -262,12 +311,33 @@ fun VehicleDocumentsScreen(
                         )
                     )
                     Text(
-                        text = "All India Tourist Permit (AITP) or Local RTO Cab Authorization",
+                        text = "All India Tourist Permit (AITP) or Local RTO Cab Authorization (if applicable)",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = TextSecondary,
                             fontSize = 11.sp
                         )
                     )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    RideMitraTextField(
+                        value = commercialPermitExpiry,
+                        onValueChange = { commercialPermitExpiry = it },
+                        label = "Permit Expiry Date (Optional)",
+                        placeholder = "DD/MM/YYYY"
+                    )
+
+                    if (permitCheck != null && permitCheck.isExpired) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Error, contentDescription = null, tint = ErrorRed)
+                            Spacer(modifier = Modifier.padding(end = 4.dp))
+                            Text(
+                                text = permitCheck.errorMessage ?: "Permit is expired.",
+                                style = MaterialTheme.typography.bodySmall.copy(color = ErrorRed, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            )
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(10.dp))
 
@@ -279,12 +349,58 @@ fun VehicleDocumentsScreen(
                         onRemoveClick = { commercialPermitUri = null },
                         isRequired = false
                     )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // 5. Fitness Certificate
+            RideMitraCard(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = 2.dp
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "5. Commercial Vehicle Fitness Certificate",
+                        style = MaterialTheme.typography.titleMedium.copy(
+                            fontWeight = FontWeight.Bold,
+                            color = PrimaryNavy
+                        )
+                    )
+                    Text(
+                        text = "RTO Form 38 fitness validity for commercial transport (if applicable)",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = TextSecondary,
+                            fontSize = 11.sp
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    RideMitraTextField(
+                        value = fitnessExpiry,
+                        onValueChange = { fitnessExpiry = it },
+                        label = "Fitness Expiry Date (Optional)",
+                        placeholder = "DD/MM/YYYY"
+                    )
+
+                    if (fitnessCheck != null && fitnessCheck.isExpired) {
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(imageVector = Icons.Default.Error, contentDescription = null, tint = ErrorRed)
+                            Spacer(modifier = Modifier.padding(end = 4.dp))
+                            Text(
+                                text = fitnessCheck.errorMessage ?: "Fitness certificate is expired.",
+                                style = MaterialTheme.typography.bodySmall.copy(color = ErrorRed, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                            )
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(10.dp))
 
                     DocumentUploadBox(
-                        title = "Upload Fitness Certificate (If Applicable)",
-                        subtitle = "Commercial vehicle fitness validity certificate",
+                        title = "Upload Fitness Certificate",
+                        subtitle = "Commercial vehicle fitness certificate copy",
                         uploadedUri = fitnessDocUri,
                         onUploadClick = { fitnessDocUri = "vehicle_fitness_certificate.pdf" },
                         onRemoveClick = { fitnessDocUri = null },
@@ -294,7 +410,7 @@ fun VehicleDocumentsScreen(
             }
 
             if (errorMessage != null) {
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.height(12.dp))
                 Text(
                     text = errorMessage!!,
                     style = MaterialTheme.typography.bodySmall.copy(
@@ -309,17 +425,44 @@ fun VehicleDocumentsScreen(
             RideMitraButton(
                 text = "Next: Review Application",
                 onClick = {
-                    if (rcNumber.isBlank() || rcDocUri == null) {
+                    if (rcNumber.trim().isBlank() || rcDocUri == null) {
                         errorMessage = "Please enter RC number and upload RC book copy."
                         return@RideMitraButton
                     }
-                    if (insurancePolicy.isBlank() || insuranceExpiry.isBlank() || insuranceDocUri == null) {
-                        errorMessage = "Please enter insurance details and upload policy document."
+                    if (insurancePolicy.trim().isBlank() || insuranceDocUri == null) {
+                        errorMessage = "Please enter insurance policy number and upload document."
                         return@RideMitraButton
                     }
-                    if (pucExpiry.isBlank() || pucDocUri == null) {
-                        errorMessage = "Please enter PUC expiry date and upload certificate."
+                    val insValidation = DocumentValidator.validateExpiry(insuranceExpiry, "Motor Insurance")
+                    if (!insValidation.isValid) {
+                        errorMessage = insValidation.errorMessage
                         return@RideMitraButton
+                    }
+
+                    if (pucDocUri == null) {
+                        errorMessage = "Please upload PUC certificate copy."
+                        return@RideMitraButton
+                    }
+                    val pucValidation = DocumentValidator.validateExpiry(pucExpiry, "PUC Certificate")
+                    if (!pucValidation.isValid) {
+                        errorMessage = pucValidation.errorMessage
+                        return@RideMitraButton
+                    }
+
+                    if (commercialPermitExpiry.isNotBlank()) {
+                        val permValidation = DocumentValidator.validateExpiry(commercialPermitExpiry, "Commercial Permit", isRequired = false)
+                        if (!permValidation.isValid) {
+                            errorMessage = permValidation.errorMessage
+                            return@RideMitraButton
+                        }
+                    }
+
+                    if (fitnessExpiry.isNotBlank()) {
+                        val fitValidation = DocumentValidator.validateExpiry(fitnessExpiry, "Fitness Certificate", isRequired = false)
+                        if (!fitValidation.isValid) {
+                            errorMessage = fitValidation.errorMessage
+                            return@RideMitraButton
+                        }
                     }
 
                     errorMessage = null
@@ -334,7 +477,8 @@ fun VehicleDocumentsScreen(
                             pucDocUri = pucDocUri,
                             fitnessExpiryDate = fitnessExpiry.trim(),
                             fitnessDocUri = fitnessDocUri,
-                            commercialPermitUri = commercialPermitUri
+                            commercialPermitUri = commercialPermitUri,
+                            commercialPermitExpiryDate = commercialPermitExpiry.trim()
                         )
                     )
                 },

@@ -21,11 +21,13 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DirectionsCar
+import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Luggage
 import androidx.compose.material.icons.filled.NearMe
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -61,25 +63,20 @@ import com.ridemitra.app.ui.theme.TealAccent
 import com.ridemitra.app.ui.theme.TextMuted
 import com.ridemitra.app.ui.theme.TextPrimary
 import com.ridemitra.app.ui.theme.TextSecondary
+import com.ridemitra.app.ui.theme.WarningAmber
 
 /**
- * Screen 7: Booking Requests Screen.
- * Displays incoming passenger bookings when available:
- * - Passenger pickup location
- * - Destination
- * - Distance
- * - Estimated journey duration
- * - Passenger count
- * - Luggage information
- * - Requested departure time
- * - Estimated driver payout
- * - Ride type (Shared/Solo)
- * Actions: Accept, Reject, View details.
- * Note: If backend is unavailable, shows meaningful clean empty state: "No ride requests available right now."
+ * Driver Booking Requests Screen
+ * Features:
+ * - Clear labeling of sample dispatch requests as DEMO DATA.
+ * - Prevents accepting bookings if driver is not approved or has expired documents.
+ * - Displays N-1 passenger capacity compatibility.
  */
 @Composable
 fun DriverRequestsScreen(
     requests: List<DriverBookingRequest>,
+    isEligibleForBookings: Boolean = true,
+    eligibilityBlockReason: String? = null,
     onAcceptRequest: (DriverBookingRequest) -> Unit,
     onRejectRequest: (DriverBookingRequest) -> Unit,
     modifier: Modifier = Modifier
@@ -91,8 +88,36 @@ fun DriverRequestsScreen(
     ) {
         RideMitraHeader(
             title = "Booking Requests",
-            subtitle = if (requests.isNotEmpty()) "${requests.size} dispatch requests available" else "Awaiting airport passenger requests"
+            subtitle = if (requests.isNotEmpty()) "${requests.size} dispatch requests available [DEMO DATA]" else "Awaiting airport passenger requests"
         )
+
+        // Block banner if ineligible
+        if (!isEligibleForBookings) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFFFEF2F2))
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = ErrorRed,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = eligibilityBlockReason ?: "Dispatch Ineligible: Approval and valid non-expired documents required to accept trips.",
+                        style = MaterialTheme.typography.bodySmall.copy(
+                            color = Color(0xFF991B1B),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 11.sp
+                        )
+                    )
+                }
+            }
+        }
 
         if (requests.isEmpty()) {
             Box(
@@ -123,7 +148,7 @@ fun DriverRequestsScreen(
                     Spacer(modifier = Modifier.height(6.dp))
 
                     Text(
-                        text = "RideMitra matches drivers parked near airport arrival terminal pillars. Keep your GPS active to receive instant dispatches.",
+                        text = "RideMitra matches drivers parked near airport arrival terminal pillars. Switch online on the home dashboard to receive incoming dispatches.",
                         style = MaterialTheme.typography.bodySmall.copy(
                             color = TextSecondary,
                             lineHeight = 18.sp
@@ -146,100 +171,148 @@ fun DriverRequestsScreen(
                         elevation = 4.dp
                     ) {
                         Column(modifier = Modifier.fillMaxWidth()) {
-                            // Top Row: Type & Driver Payout
+                            // Top Row: Type & Driver Payout (Labeled DEMO DATA)
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                StatusBadge(
-                                    text = if (req.rideType == RideOptionType.SHARED_POOL) "SHARED POOL (${req.passengerCount} RIDERS)" else "SOLO PRIVATE CAB",
-                                    variant = if (req.rideType == RideOptionType.SHARED_POOL) BadgeVariant.ROYAL else BadgeVariant.TEAL
-                                )
-
-                                Column(horizontalAlignment = Alignment.End) {
-                                    Text(
-                                        text = "₹${req.estimatedDriverPayout.toInt()}",
-                                        style = MaterialTheme.typography.titleLarge.copy(
-                                            fontWeight = FontWeight.ExtraBold,
-                                            color = PrimaryNavy
-                                        )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    StatusBadge(
+                                        text = if (req.rideType == RideOptionType.SHARED_POOL) "SHARED POOL" else "SOLO RIDE",
+                                        variant = if (req.rideType == RideOptionType.SHARED_POOL) BadgeVariant.TEAL else BadgeVariant.ROYAL
                                     )
-                                    Text(
-                                        text = "Guaranteed Net Payout",
-                                        style = MaterialTheme.typography.labelSmall.copy(
-                                            color = SuccessGreen,
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontSize = 9.sp
-                                        )
-                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    StatusBadge(text = "DEMO DATA", variant = BadgeVariant.NEUTRAL)
                                 }
-                            }
 
-                            Spacer(modifier = Modifier.height(12.dp))
-
-                            // Route Info
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(SurfaceVariantLight)
-                                    .padding(10.dp)
-                            ) {
                                 Text(
-                                    text = "Pickup: ${req.passengerPickup}",
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        fontWeight = FontWeight.Bold,
-                                        color = PrimaryNavy
-                                    )
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    text = "Drop: ${req.destination}",
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        color = TextSecondary
+                                    text = "₹${req.estimatedDriverPayout.toInt()} Payout [DEMO]",
+                                    style = MaterialTheme.typography.titleMedium.copy(
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = SuccessGreen
                                     )
                                 )
                             }
 
                             Spacer(modifier = Modifier.height(10.dp))
 
-                            // Meta specs: distance, duration, luggage, time
+                            // Route Details
+                            Row(verticalAlignment = Alignment.Top) {
+                                Icon(
+                                    imageVector = Icons.Default.NearMe,
+                                    contentDescription = null,
+                                    tint = RoyalBlue,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Column {
+                                    Text(
+                                        text = "Pickup: ${req.passengerPickup}",
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary
+                                        )
+                                    )
+                                    Text(
+                                        text = "Drop: ${req.destination}",
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = TextSecondary,
+                                            fontSize = 11.sp
+                                        )
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Route Metrics Pill
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(SurfaceVariantLight)
+                                    .padding(horizontal = 10.dp, vertical = 6.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
                                 Text(
                                     text = "${req.distanceKm} km • ~${req.estimatedDurationMinutes} mins",
                                     style = MaterialTheme.typography.bodySmall.copy(
+                                        color = TextPrimary,
                                         fontWeight = FontWeight.SemiBold,
-                                        color = TextPrimary
+                                        fontSize = 11.sp
                                     )
                                 )
                                 Text(
-                                    text = "Luggage: ${req.luggageSummary}",
+                                    text = req.requestedDepartureTime,
                                     style = MaterialTheme.typography.bodySmall.copy(
-                                        color = TextSecondary,
+                                        color = RoyalBlue,
+                                        fontWeight = FontWeight.Bold,
                                         fontSize = 11.sp
                                     )
                                 )
                             }
 
-                            Spacer(modifier = Modifier.height(6.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
 
-                            Text(
-                                text = "Departure: ${req.requestedDepartureTime} (At Terminal Pillar)",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    color = RoyalBlue,
-                                    fontWeight = FontWeight.SemiBold
+                            // Passenger Count & Luggage
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Group,
+                                        contentDescription = null,
+                                        tint = TextSecondary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "${req.passengerCount} Passengers",
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = TextSecondary,
+                                            fontSize = 11.sp
+                                        )
+                                    )
+                                }
+
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Default.Luggage,
+                                        contentDescription = null,
+                                        tint = TextSecondary,
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = req.luggageSummary,
+                                        style = MaterialTheme.typography.bodySmall.copy(
+                                            color = TextSecondary,
+                                            fontSize = 11.sp
+                                        )
+                                    )
+                                }
+                            }
+
+                            if (req.flightNumber != null) {
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = "Flight: ${req.flightNumber}",
+                                    style = MaterialTheme.typography.bodySmall.copy(
+                                        color = TealAccent,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 10.sp
+                                    )
                                 )
-                            )
+                            }
 
-                            Spacer(modifier = Modifier.height(14.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
                             HorizontalDivider(color = BorderLight)
-                            Spacer(modifier = Modifier.height(14.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
 
-                            // Actions: Decline / Accept
+                            // Action Buttons
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -247,18 +320,21 @@ fun DriverRequestsScreen(
                                 RideMitraOutlinedButton(
                                     text = "Decline",
                                     onClick = { onRejectRequest(req) },
-                                    modifier = Modifier.weight(1f),
                                     borderColor = BorderLight,
                                     textColor = TextSecondary,
-                                    height = 44.dp
+                                    modifier = Modifier.weight(0.7f),
+                                    height = 42.dp
                                 )
 
                                 RideMitraButton(
-                                    text = "Accept Ride",
-                                    onClick = { onAcceptRequest(req) },
-                                    modifier = Modifier.weight(1.4f),
-                                    gradient = HeroTealGradient,
-                                    height = 44.dp
+                                    text = if (isEligibleForBookings) "Accept Dispatch" else "Ineligible to Accept",
+                                    onClick = {
+                                        if (isEligibleForBookings) onAcceptRequest(req)
+                                    },
+                                    gradient = if (isEligibleForBookings) HeroTealGradient else PrimaryGradient,
+                                    leadingIcon = if (isEligibleForBookings) Icons.Default.Check else Icons.Default.Warning,
+                                    modifier = Modifier.weight(1.3f),
+                                    height = 42.dp
                                 )
                             }
                         }
