@@ -4,33 +4,17 @@ import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.ridemitra.app.ui.components.RideMitraButton
-import com.ridemitra.app.ui.components.RideMitraHeader
+import com.ridemitra.app.ui.screens.admin.AdminMainScreen
 import com.ridemitra.app.ui.screens.auth.RoleSelectionScreen
 import com.ridemitra.app.ui.screens.driver.DriverMainScreen
 import com.ridemitra.app.ui.screens.onboarding.OnboardingScreen
 import com.ridemitra.app.ui.screens.passenger.PassengerMainScreen
 import com.ridemitra.app.ui.screens.splash.SplashScreen
-import com.ridemitra.app.ui.theme.BackgroundLight
-import com.ridemitra.app.ui.theme.PrimaryNavy
-import com.ridemitra.app.ui.theme.TextSecondary
 
 @Composable
 fun RideMitraNavGraph(
@@ -125,57 +109,15 @@ fun RideMitraNavGraph(
             )
         }
 
-        // 6. Admin Portal Preview (Phase 4)
+        // 6. Admin Portal - Phase 4 Complete Dashboard
         composable(Screen.AdminMain.route) {
-            AdminPlaceholderScreen(
-                onBack = {
-                    navController.popBackStack()
+            AdminMainScreen(
+                onNavigateBackToRole = {
+                    navController.navigate(Screen.RoleSelection.route) {
+                        popUpTo(Screen.AdminMain.route) { inclusive = true }
+                    }
                 }
             )
-        }
-    }
-}
-
-@Composable
-private fun AdminPlaceholderScreen(onBack: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(BackgroundLight)
-    ) {
-        RideMitraHeader(
-            title = "Admin Portal",
-            subtitle = "RideMitra Operations & Compliance",
-            onBackClick = onBack
-        )
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "Platform Administration",
-                    style = MaterialTheme.typography.headlineMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = PrimaryNavy
-                    )
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = "Admin management dashboard, vehicle approvals, passenger records, and analytics are scheduled for Phase 4.",
-                    style = MaterialTheme.typography.bodyMedium.copy(
-                        color = TextSecondary
-                    )
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-                RideMitraButton(
-                    text = "Back to Roles",
-                    onClick = onBack
-                )
-            }
         }
     }
 }
