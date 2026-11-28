@@ -280,7 +280,6 @@ private fun ComplaintCard(
         )
     }
 }
-}
 
 // ─── Analytics Screen ─────────────────────────────────────────────────────────
 

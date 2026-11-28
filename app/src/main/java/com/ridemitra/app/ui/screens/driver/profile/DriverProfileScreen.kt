@@ -372,7 +372,7 @@ fun DriverProfileScreen(
                     onClick = { showSupportDialog = true }
                 )
 
-                Divider(color = DividerLight)
+                HorizontalDivider(color = DividerLight)
 
                 ActionRowItem(
                     icon = Icons.Default.Description,
@@ -382,7 +382,7 @@ fun DriverProfileScreen(
                     onClick = { showPolicyDialog = "TERMS" }
                 )
 
-                Divider(color = DividerLight)
+                HorizontalDivider(color = DividerLight)
 
                 ActionRowItem(
                     icon = Icons.Default.PrivacyTip,
@@ -392,7 +392,7 @@ fun DriverProfileScreen(
                     onClick = { showPolicyDialog = "PRIVACY" }
                 )
 
-                Divider(color = DividerLight)
+                HorizontalDivider(color = DividerLight)
 
                 ActionRowItem(
                     icon = Icons.Default.SwapHoriz,

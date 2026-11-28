@@ -48,6 +48,8 @@ import com.ridemitra.app.ui.components.BadgeVariant
 import com.ridemitra.app.ui.components.RideMitraButton
 import com.ridemitra.app.ui.components.RideMitraCard
 import com.ridemitra.app.ui.components.RideMitraHeader
+import com.ridemitra.app.ui.theme.HeroTealGradient
+import com.ridemitra.app.ui.theme.PrimaryGradient
 import com.ridemitra.app.ui.components.RideMitraOutlinedButton
 import com.ridemitra.app.ui.components.StatusBadge
 import com.ridemitra.app.ui.theme.BackgroundLight

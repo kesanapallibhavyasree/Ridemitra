@@ -16,8 +16,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -116,6 +118,8 @@ fun OnboardingScreen(
         modifier = modifier
             .fillMaxSize()
             .background(BackgroundLight)
+            .statusBarsPadding()
+            .navigationBarsPadding()
             .padding(horizontal = 20.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -200,7 +204,7 @@ fun OnboardingScreen(
                                 .size(110.dp)
                                 .clip(CircleShape)
                                 .background(
-                                    Brush.radialGradient(
+                                    Brush.verticalGradient(
                                         colors = listOf(
                                             RoyalBlue.copy(alpha = 0.15f),
                                             Color(0xFFE0F7F4)
